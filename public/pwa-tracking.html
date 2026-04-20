@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#0f172a" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Seguimiento" />
+  <link rel="apple-touch-icon" href="/pwa-192x192.png" />
+  <title>Seguimiento ERBI</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #0f172a;
+      color: #e2e8f0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      min-height: 100vh;
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+    .loading { text-align: center; font-size: 1.5rem; font-weight: bold; animation: pulse 1.5s ease-in-out infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.5} }
+    @keyframes bounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
+
+    /* ── Card ── */
+    .card {
+      background: #1e293b;
+      border: 2px solid #334155;
+      border-radius: 1.5rem;
+      padding: 2rem;
+      text-align: center;
+      max-width: 400px;
+      width: 100%;
+      box-shadow: 0 25px 50px -12px rgba(0,0,0,.5);
+    }
+
+    /* ── States ── */
+    .icon-circle {
+      width: 8rem; height: 8rem;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 1.5rem;
+      font-size: 3.5rem;
+    }
+    .icon-circle.en-curso { background: rgba(59,130,246,.15); border: 4px solid rgba(59,130,246,.3); }
+    .icon-circle.preparate { background: rgba(234,179,8,.2); border: 4px solid #eab308; animation: pulse 1.5s ease-in-out infinite; }
+    .icon-circle.completado { background: rgba(100,116,139,.15); border: 4px solid rgba(100,116,139,.3); }
+
+    .status-title { font-size: 2.5rem; font-weight: 900; margin-bottom: .75rem; line-height: 1.1; }
+    .status-title.en-curso { color: #3b82f6; }
+    .status-title.preparate { color: #eab308; }
+    .status-title.completado { color: #64748b; }
+
+    .passenger-name { font-size: 1.75rem; font-weight: 700; color: #e2e8f0; margin-bottom: 1rem; }
+
+    .eta-box {
+      display: flex; align-items: center; justify-content: center; gap: .75rem;
+      border-radius: 1rem; padding: 1rem 1.5rem; margin-bottom: 1rem;
+      font-family: ui-monospace, monospace; font-size: 2rem; font-weight: 900;
+    }
+    .eta-box.en-curso { background: rgba(59,130,246,.1); border: 2px solid rgba(59,130,246,.2); color: #e2e8f0; }
+    .eta-box.preparate { background: rgba(234,179,8,.1); border: 2px solid rgba(234,179,8,.3); color: #e2e8f0; }
+
+    .pickup { color: #94a3b8; font-size: 1.25rem; display: flex; align-items: center; justify-content: center; gap: .5rem; margin-top: .5rem; }
+    .subtitle { color: #94a3b8; font-size: 1.15rem; font-weight: 500; }
+    .updated { color: #64748b; font-size: .9rem; margin-top: 2rem; }
+
+    /* ── Alert banner ── */
+    .alert-banner {
+      background: rgba(234,179,8,.15);
+      border: 4px solid #eab308;
+      border-radius: 1.5rem;
+      padding: 1.5rem;
+      text-align: center;
+      max-width: 400px;
+      width: 100%;
+      margin-bottom: 1rem;
+      animation: pulse 1.5s ease-in-out infinite;
+      box-shadow: 0 25px 50px -12px rgba(234,179,8,.15);
+    }
+    .alert-banner h1 { font-size: 1.75rem; font-weight: 900; color: #eab308; line-height: 1.2; }
+
+    /* ── Refresh button ── */
+    .refresh-btn {
+      display: flex; align-items: center; justify-content: center; gap: .5rem;
+      width: 100%; margin-top: 1rem; padding: .75rem;
+      background: transparent; border: 1px solid #334155;
+      border-radius: .75rem; color: #94a3b8; font-size: 1rem; font-weight: 500;
+      cursor: pointer;
+    }
+    .refresh-btn:active { background: #334155; }
+
+    /* ── Install page ── */
+    .install-page { text-align: center; padding: 2rem; max-width: 400px; width: 100%; }
+    .install-page h1 { font-size: 2rem; margin-bottom: 1.5rem; }
+    .step {
+      display: flex; align-items: center; gap: 1rem;
+      background: #1e293b; border-radius: 1rem;
+      padding: 1rem 1.25rem; margin-bottom: 1rem; text-align: left;
+    }
+    .step-icon { font-size: 2.5rem; flex-shrink: 0; }
+    .step p { font-size: 1.1rem; font-weight: 600; line-height: 1.3; }
+    .step strong { color: #60a5fa; }
+    .back-btn {
+      display: inline-block; margin-top: 1.5rem; padding: 1rem 2rem;
+      background: #3b82f6; color: white; border: none; border-radius: 1rem;
+      font-size: 1.2rem; font-weight: 700; cursor: pointer; width: 100%;
+    }
+    .note { margin-top: 1rem; font-size: .9rem; color: #94a3b8; }
+
+    /* ── Error / invalid ── */
+    .error-page {
+      text-align: center; padding: 2rem; max-width: 400px; width: 100%;
+    }
+    .error-page h1 { font-size: 2rem; font-weight: 900; margin-bottom: .75rem; }
+    .error-page p { color: #94a3b8; font-size: 1.1rem; }
+  </style>
+</head>
+<body>
+
+  <!-- Loading state -->
+  <div id="loading-msg" class="loading">Cargando seguimiento…</div>
+
+  <!-- Install instructions (hidden by default) -->
+  <div id="install-instructions" style="display:none;">
+    <div class="install-page">
+      <h1>📲 Instalar seguimiento</h1>
+      <div id="ios-steps" style="display:none;">
+        <div class="step"><span class="step-icon">⬆️</span><p>Pulsa el botón de <strong>Compartir</strong> abajo en Safari</p></div>
+        <div class="step"><span class="step-icon">➕</span><p>Pulsa <strong>"Añadir a inicio"</strong></p></div>
+        <div class="step"><span class="step-icon">✅</span><p>Pulsa <strong>"Añadir"</strong> — ¡listo!</p></div>
+      </div>
+      <div id="android-steps" style="display:none;">
+        <div class="step"><span class="step-icon">⋮</span><p>Pulsa los <strong>tres puntos</strong> arriba a la derecha</p></div>
+        <div class="step"><span class="step-icon">➕</span><p>Pulsa <strong>"Añadir a pantalla de inicio"</strong></p></div>
+        <div class="step"><span class="step-icon">✅</span><p>Pulsa <strong>"Añadir"</strong> — ¡listo!</p></div>
+      </div>
+      <p class="note">⚠️ NO cierres esta página hasta que hayas instalado la app</p>
+      <button class="back-btn" id="back-btn">← Volver al seguimiento</button>
+    </div>
+  </div>
+
+  <!-- Tracking UI (hidden by default) -->
+  <div id="tracking-ui" style="display:none; width:100%; max-width:400px;">
+    <div id="alert-banner" class="alert-banner" style="display:none;">
+      <div style="font-size:3.5rem; margin-bottom:.5rem;">🚌</div>
+      <h1>¡EL AUTOBÚS ESTÁ LLEGANDO!</h1>
+      <div id="alert-name" style="font-size:1.5rem; font-weight:700; color:#e2e8f0; margin-top:.5rem;"></div>
+      <div id="alert-eta" class="eta-box preparate" style="margin-top:.75rem; display:none;"></div>
+    </div>
+
+    <div class="card">
+      <div style="font-size:.9rem; text-transform:uppercase; letter-spacing:.15em; color:#64748b; font-weight:700; margin-bottom:1.5rem;">Seguimiento</div>
+      <div id="icon-circle" class="icon-circle en-curso"><span>🚐</span></div>
+      <h1 id="status-title" class="status-title en-curso">Cargando…</h1>
+      <div id="passenger-name" class="passenger-name" style="display:none;"></div>
+      <div id="eta-box" class="eta-box en-curso" style="display:none;"></div>
+      <div id="pickup-location" class="pickup" style="display:none;"><span>📍</span><span id="pickup-text"></span></div>
+      <p id="status-subtitle" class="subtitle"></p>
+      <p id="updated-time" class="updated"></p>
+      <button id="refresh-btn" class="refresh-btn" onclick="refresh()">↻ Actualizar ahora</button>
+    </div>
+  </div>
+
+  <!-- Error state -->
+  <div id="error-ui" class="error-page" style="display:none;">
+    <div style="font-size:4rem; margin-bottom:1rem;">⚠️</div>
+    <h1 id="error-title">Enlace no válido</h1>
+    <p id="error-msg">Este enlace de seguimiento no existe o ha sido eliminado.</p>
+  </div>
+
+  <script>
+    // ══════════════════════════════════════════════════════════════════
+    // PÁGINA DE SEGUIMIENTO 100% AUTÓNOMA
+    // NO depende de React, iframe, ni redirecciones.
+    // Llama directamente a la API de Supabase.
+    // ══════════════════════════════════════════════════════════════════
+
+    var SUPABASE_URL = 'https://cmsnpgalkulkdxagfxpo.supabase.co';
+    var SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNtc25wZ2Fsa3Vsa2R4YWdmeHBvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc2ODE1NTgsImV4cCI6MjA4MzI1NzU1OH0.Ydf01rcETJOFrA9NJ8t7Hka7IZwubJ6Nn-gpRuaOHFk';
+
+    var token = null;
+    var refreshTimer = null;
+
+    // ── Get token from URL ──
+    (function() {
+      var params = new URLSearchParams(window.location.search);
+      token = params.get('t');
+
+      if (token) {
+        try {
+          localStorage.setItem('erbi:tracking_token', token);
+          localStorage.setItem('erbi:tracking_last_visit', Date.now().toString());
+        } catch(e) {}
+      } else {
+        // Try localStorage
+        try { token = localStorage.getItem('erbi:tracking_token'); } catch(e) {}
+      }
+
+      if (!token) {
+        // No token anywhere - show error
+        document.getElementById('loading-msg').style.display = 'none';
+        document.getElementById('error-ui').style.display = 'block';
+        document.getElementById('error-title').textContent = 'Sin enlace';
+        document.getElementById('error-msg').textContent = 'No se encontró un enlace de seguimiento. Pide a la empresa que te envíe uno nuevo.';
+        return;
+      }
+
+      // ── Detect standalone vs browser ──
+      var isStandalone = false;
+      try {
+        isStandalone = window.matchMedia('(display-mode: standalone)').matches
+          || (window.navigator.standalone === true);
+      } catch(e) {}
+
+      if (isStandalone) {
+        // ══ PWA INSTALADA: mostrar seguimiento directamente ══
+        showTracking();
+      } else {
+        // ══ NAVEGADOR: mostrar instrucciones de instalación ══
+        injectManifest();
+        showInstallInstructions();
+      }
+    })();
+
+    function injectManifest() {
+      var manifest = {
+        id: '/seguimiento-aspace/' + token,
+        name: 'Seguimiento ERBI',
+        short_name: 'Seguimiento',
+        description: 'Seguimiento de recogida en tiempo real',
+        theme_color: '#0f172a',
+        background_color: '#0f172a',
+        display: 'standalone',
+        orientation: 'portrait',
+        start_url: window.location.origin + '/pwa-tracking.html?t=' + token,
+        scope: window.location.origin + '/',
+        icons: [
+          { src: '/pwa-192x192.png', sizes: '192x192', type: 'image/png' },
+          { src: '/pwa-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' }
+        ]
+      };
+      var blob = new Blob([JSON.stringify(manifest)], { type: 'application/json' });
+      var link = document.createElement('link');
+      link.rel = 'manifest';
+      link.href = URL.createObjectURL(blob);
+      document.head.appendChild(link);
+    }
+
+    function showInstallInstructions() {
+      document.getElementById('loading-msg').style.display = 'none';
+      document.getElementById('install-instructions').style.display = 'block';
+
+      var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+        (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+      document.getElementById(isIOS ? 'ios-steps' : 'android-steps').style.display = 'block';
+
+      document.getElementById('back-btn').addEventListener('click', function() {
+        // Show tracking in-place instead of redirecting
+        document.getElementById('install-instructions').style.display = 'none';
+        showTracking();
+      });
+    }
+
+    function showTracking() {
+      document.getElementById('loading-msg').style.display = 'none';
+      document.getElementById('install-instructions').style.display = 'none';
+      var ui = document.getElementById('tracking-ui');
+      ui.style.display = 'flex';
+      ui.style.flexDirection = 'column';
+      ui.style.alignItems = 'center';
+
+      // Start polling
+      loadTrackingData();
+      refreshTimer = setInterval(loadTrackingData, 20000);
+
+      // Refresh on focus
+      document.addEventListener('visibilitychange', function() {
+        if (document.visibilityState === 'visible') loadTrackingData();
+      });
+    }
+
+    function refresh() {
+      var btn = document.getElementById('refresh-btn');
+      btn.textContent = '↻ Actualizando…';
+      btn.disabled = true;
+      loadTrackingData().then(function() {
+        setTimeout(function() {
+          btn.textContent = '↻ Actualizar ahora';
+          btn.disabled = false;
+        }, 800);
+      });
+    }
+
+    // ── Supabase REST helper ──
+    function sbGet(table, query) {
+      var url = SUPABASE_URL + '/rest/v1/' + table + '?' + query;
+      return fetch(url, {
+        headers: {
+          'apikey': SUPABASE_KEY,
+          'Authorization': 'Bearer ' + SUPABASE_KEY,
+          'Accept': 'application/json'
+        }
+      }).then(function(r) { return r.json(); });
+    }
+
+    function sbPatch(table, query, body) {
+      var url = SUPABASE_URL + '/rest/v1/' + table + '?' + query;
+      return fetch(url, {
+        method: 'PATCH',
+        headers: {
+          'apikey': SUPABASE_KEY,
+          'Authorization': 'Bearer ' + SUPABASE_KEY,
+          'Content-Type': 'application/json',
+          'Prefer': 'return=minimal'
+        },
+        body: JSON.stringify(body)
+      }).catch(function() {});
+    }
+
+    function getMinutesToTime(timeStr) {
+      var parts = timeStr.split(':');
+      var h = parseInt(parts[0], 10);
+      var m = parseInt(parts[1], 10);
+      if (isNaN(h) || isNaN(m)) return null;
+      var now = new Date();
+      var scheduled = new Date(now);
+      scheduled.setHours(h, m, 0, 0);
+      return Math.round((scheduled.getTime() - now.getTime()) / 60000);
+    }
+
+    async function loadTrackingData() {
+      if (!token) return;
+
+      try {
+        // 1. Validate token
+        var tokens = await sbGet('tracking_tokens',
+          'select=id,passenger_id,passenger_name,route_name,is_active&token=eq.' + encodeURIComponent(token) + '&limit=1');
+
+        if (!tokens || tokens.length === 0) {
+          renderError('Enlace no válido', 'Este enlace de seguimiento no existe o ha sido eliminado.');
+          return;
+        }
+
+        var tkn = tokens[0];
+        if (!tkn.is_active) {
+          renderError('Enlace no activo', 'El seguimiento para este usuario no está activado actualmente.');
+          return;
+        }
+
+        // Update last_access
+        sbPatch('tracking_tokens', 'id=eq.' + tkn.id, { last_access_at: new Date().toISOString() });
+
+        // 2. Get passenger name
+        var pName = tkn.passenger_name || '';
+        if (tkn.passenger_id) {
+          var passengers = await sbGet('passengers', 'select=name&id=eq.' + tkn.passenger_id + '&limit=1');
+          if (passengers && passengers.length > 0) pName = passengers[0].name;
+        }
+
+        // 3. Get trips
+        var tripsQuery = 'select=id,scheduled_time,pickup_location,sort_order,schedule_section&route=eq.' +
+          encodeURIComponent(tkn.route_name) + '&is_active=eq.true&order=sort_order.asc';
+        if (tkn.passenger_id) tripsQuery += '&passenger_id=eq.' + tkn.passenger_id;
+
+        var passengerTrips = await sbGet('schedule_trips', tripsQuery);
+        if (!passengerTrips || passengerTrips.length === 0) {
+          renderStatus('en_curso', pName, null, null, 'Ruta en curso');
+          return;
+        }
+
+        // 4. Get attendance for today
+        var today = new Date().toISOString().slice(0, 10);
+        var attendance = await sbGet('attendance_records',
+          'select=id,status,trip_id&record_date=eq.' + today + '&route=eq.' + encodeURIComponent(tkn.route_name));
+
+        var FINAL = ['acudido', 'recogido', 'no_acudido', 'present', 'absent'];
+        var completedIds = {};
+        (attendance || []).forEach(function(a) {
+          if (FINAL.indexOf(a.status) >= 0) completedIds[a.trip_id] = true;
+        });
+
+        // 5. Determine morning/afternoon
+        var morningTrips = passengerTrips.filter(function(t) { return t.schedule_section.toLowerCase().indexOf('morning') >= 0; });
+        var afternoonTrips = passengerTrips.filter(function(t) { return t.schedule_section.toLowerCase().indexOf('afternoon') >= 0; });
+
+        var allMorningDone = morningTrips.length > 0 && morningTrips.every(function(t) { return completedIds[t.id]; });
+        var now = new Date();
+        var totalMin = now.getHours() * 60 + now.getMinutes();
+        var isMorning = !allMorningDone && totalMin < 15 * 60;
+
+        var relevantTrips = isMorning ? morningTrips : afternoonTrips;
+        if (relevantTrips.length === 0) { renderStatus('completado', pName, null, null, null); return; }
+
+        var allDone = relevantTrips.every(function(t) { return completedIds[t.id]; });
+        if (allDone) { renderStatus('completado', pName, null, null, null); return; }
+
+        var targetTrip = relevantTrips[0];
+        var pickup = targetTrip.pickup_location;
+
+        // 6. Check ETA
+        var scheduledEta = targetTrip.scheduled_time ? getMinutesToTime(targetTrip.scheduled_time) : null;
+        var isPreparateWindow = scheduledEta !== null && scheduledEta <= 8 && scheduledEta >= -30;
+
+        if (isPreparateWindow) {
+          var etaText = scheduledEta <= 0 ? 'Llegando' : '~' + scheduledEta + ' min';
+          renderStatus('preparate', pName, etaText, pickup, null);
+          return;
+        }
+
+        // 7. Check if target trip is finalized
+        if (completedIds[targetTrip.id]) { renderStatus('completado', pName, null, null, null); return; }
+
+        // 8. Get all section trips for position-based ETA
+        var allSectionTrips = await sbGet('schedule_trips',
+          'select=id,scheduled_time,pickup_location,sort_order,schedule_section&route=eq.' +
+          encodeURIComponent(tkn.route_name) + '&schedule_section=eq.' +
+          encodeURIComponent(targetTrip.schedule_section) + '&is_active=eq.true&order=sort_order.asc');
+
+        var targetIdx = -1;
+        var lastCompletedIdx = -1;
+        (allSectionTrips || []).forEach(function(t, i) {
+          if (t.id === targetTrip.id) targetIdx = i;
+          if (completedIds[t.id]) lastCompletedIdx = i;
+        });
+
+        if (lastCompletedIdx >= 0 && lastCompletedIdx >= targetIdx) {
+          renderStatus('completado', pName, null, null, null);
+          return;
+        }
+
+        // Previous stop completed → bus very close
+        var prevDone = allSectionTrips && targetIdx > 0 && completedIds[allSectionTrips[targetIdx - 1].id];
+        if (prevDone) {
+          renderStatus('preparate', pName, '~1-3 min', pickup, null);
+          return;
+        }
+
+        // Fallback ETA by stops
+        var etaText = null;
+        if (lastCompletedIdx >= 0) {
+          var stopsAway = targetIdx - lastCompletedIdx - 1;
+          var fallback = Math.max(1, stopsAway * 4);
+          etaText = '~' + fallback + ' min';
+          if (fallback <= 8) { renderStatus('preparate', pName, etaText, pickup, null); return; }
+        } else if (targetTrip.scheduled_time) {
+          etaText = 'Previsto ~' + targetTrip.scheduled_time;
+        }
+
+        renderStatus('en_curso', pName, etaText, pickup, 'Te avisaremos cuando el autobús esté cerca.');
+
+      } catch(e) {
+        console.error('[Tracking] Error:', e);
+        // Don't overwrite UI on transient network errors
+      }
+    }
+
+    function renderStatus(status, name, eta, pickup, subtitle) {
+      // Show tracking UI
+      var trackingUI = document.getElementById('tracking-ui');
+      trackingUI.style.display = 'flex';
+      document.getElementById('error-ui').style.display = 'none';
+
+      var iconCircle = document.getElementById('icon-circle');
+      var statusTitle = document.getElementById('status-title');
+      var nameEl = document.getElementById('passenger-name');
+      var etaBox = document.getElementById('eta-box');
+      var pickupEl = document.getElementById('pickup-location');
+      var pickupText = document.getElementById('pickup-text');
+      var subtitleEl = document.getElementById('status-subtitle');
+      var alertBanner = document.getElementById('alert-banner');
+      var alertName = document.getElementById('alert-name');
+      var alertEta = document.getElementById('alert-eta');
+
+      // Reset classes
+      iconCircle.className = 'icon-circle ' + status;
+      statusTitle.className = 'status-title ' + status;
+
+      if (status === 'preparate') {
+        statusTitle.textContent = '¡Prepárate!';
+        alertBanner.style.display = 'block';
+        alertName.textContent = name || '';
+        if (eta) {
+          alertEta.style.display = 'flex';
+          alertEta.textContent = '🕐 ' + eta;
+        } else {
+          alertEta.style.display = 'none';
+        }
+      } else {
+        alertBanner.style.display = 'none';
+        if (status === 'en_curso') statusTitle.textContent = 'Ruta en curso';
+        else if (status === 'completado') statusTitle.textContent = 'Sin servicio programado';
+      }
+
+      if (name) { nameEl.textContent = name; nameEl.style.display = 'block'; }
+      else { nameEl.style.display = 'none'; }
+
+      if (eta && status !== 'completado') {
+        etaBox.className = 'eta-box ' + status;
+        etaBox.textContent = '🕐 ' + eta;
+        etaBox.style.display = 'flex';
+      } else {
+        etaBox.style.display = 'none';
+      }
+
+      if (pickup && status !== 'completado') {
+        pickupText.textContent = pickup;
+        pickupEl.style.display = 'flex';
+      } else {
+        pickupEl.style.display = 'none';
+      }
+
+      subtitleEl.textContent = subtitle || (status === 'completado' ? 'No hay recogidas pendientes en este momento.' : '');
+
+      var now = new Date();
+      document.getElementById('updated-time').textContent = 'Actualizado: ' +
+        now.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+    }
+
+    function renderError(title, msg) {
+      document.getElementById('tracking-ui').style.display = 'none';
+      document.getElementById('loading-msg').style.display = 'none';
+      document.getElementById('error-ui').style.display = 'block';
+      document.getElementById('error-title').textContent = title;
+      document.getElementById('error-msg').textContent = msg;
+      if (refreshTimer) { clearInterval(refreshTimer); refreshTimer = null; }
+    }
+  </script>
+</body>
+</html>

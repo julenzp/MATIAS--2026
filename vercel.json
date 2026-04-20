@@ -1,0 +1,24 @@
+{
+  "rewrites": [
+    {
+      "source": "/erbi-standalone.html",
+      "destination": "/erbi-standalone.html"
+    },
+    {
+      "source": "/pwa-:route.html",
+      "destination": "/pwa-:route.html"
+    },
+    {
+      "source": "/manifest-:route.webmanifest",
+      "destination": "/manifest-:route.webmanifest"
+    },
+    {
+      "source": "/t/:token",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}

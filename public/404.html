@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cargando ERBI...</title>
+    <meta name="robots" content="noindex" />
+    <style>
+      body {
+        font-family: system-ui, -apple-system, sans-serif;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        margin: 0;
+        background: #0f172a;
+        color: #fff;
+      }
+      .loader {
+        text-align: center;
+      }
+      .spinner {
+        width: 40px;
+        height: 40px;
+        border: 3px solid rgba(255,255,255,0.2);
+        border-top-color: #22d3ee;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin: 0 auto 16px;
+      }
+      @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+    <script>
+      (function () {
+        try {
+          var loc = window.location;
+          var fullPath = loc.pathname + loc.search + loc.hash;
+          
+          // Evita bucle infinito si ya estamos en la raíz
+          if (fullPath === "/" || fullPath === "/index.html" || fullPath === "") {
+            return;
+          }
+
+          // ATAJO para /t/TOKEN (start_url de PWA de seguimiento)
+          if (loc.pathname.indexOf("/t/") === 0) {
+            var tkn = loc.pathname.substring(3);
+            if (tkn) {
+              loc.replace(loc.origin + "/#/seguimiento-aspace/" + tkn);
+              return;
+            }
+          }
+
+          // ATAJO para rutas de seguimiento: redirigir directamente a hash routing
+          if (loc.pathname.indexOf("/seguimiento-aspace/") === 0) {
+            loc.replace(loc.origin + "/#" + loc.pathname + loc.search);
+            return;
+          }
+          
+          // Guardar la ruta original para restaurar después del redirect
+          sessionStorage.setItem("lovable:pwa_redirect", fullPath);
+          
+          // Redirect a la raíz - el ClientSideRedirect de React restaurará la ruta
+          loc.replace("/");
+        } catch (e) {
+          // Si falla, al menos intentar ir a la raíz
+          try { window.location.replace("/"); } catch(e2) {}
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    <div class="loader">
+      <div class="spinner"></div>
+      <p>Cargando ERBI...</p>
+    </div>
+  </body>
+</html>

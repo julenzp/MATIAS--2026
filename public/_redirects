@@ -1,0 +1,12 @@
+# Standalone admin panel
+/erbi-standalone.html  /erbi-standalone.html  200
+
+# Archivos PWA: servir directamente sin redirigir al SPA
+/pwa-*.html  /pwa-:splat.html  200
+/manifest-*.webmanifest  /manifest-:splat.webmanifest  200
+
+# Tracking PWA start_url: servir index.html directamente
+/t/*  /index.html  200
+
+# SPA fallback: redirige todas las demás rutas al index.html para que React Router las maneje
+/*    /index.html   200
