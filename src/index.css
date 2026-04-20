@@ -1,0 +1,348 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Fondo muy claro y luminoso - nada de oscuros */
+    --background: 210 40% 98%;
+    --foreground: 215 40% 12%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 215 40% 12%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 215 40% 12%;
+
+    /* Azul corporativo ERBI vibrante y visible */
+    --primary: 199 89% 32%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 160 65% 36%;
+    --secondary-foreground: 0 0% 100%;
+
+    /* Muted muy claro para fondos de elementos secundarios */
+    --muted: 210 30% 95%;
+    --muted-foreground: 215 25% 38%;
+
+    --accent: 35 95% 52%;
+    --accent-foreground: 215 40% 12%;
+
+    --destructive: 0 84% 55%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 210 25% 85%;
+    --input: 210 25% 85%;
+    --ring: 199 89% 32%;
+
+    --radius: 0.75rem;
+
+    /* Custom transport colors */
+    --route-morning: 199 89% 32%;
+    --route-afternoon: 160 65% 36%;
+    --row-even: 199 40% 97%;
+    --row-odd: 0 0% 100%;
+    --header-bg: 199 89% 28%;
+    --header-text: 0 0% 100%;
+    --badge-s: 280 65% 52%;
+    --badge-b: 35 95% 48%;
+    --pink-soft: 340 70% 65%;
+    --incident-slot-bg: 210 33% 97%;
+    --incident-slot-border: 199 35% 82%;
+    --incident-response-bg: 142 63% 62%;
+    --incident-response-foreground: 215 40% 12%;
+    --incident-response-border: 143 55% 42%;
+    --incident-pending-bg: 47 100% 96%;
+    --incident-pending-foreground: 35 78% 35%;
+    --incident-pending-border: 42 90% 62%;
+  }
+
+  /* Sin modo oscuro forzado - la app es para personas mayores, siempre claro */
+  .dark {
+    --background: 210 40% 98%;
+    --foreground: 215 40% 12%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 215 40% 12%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 215 40% 12%;
+
+    --primary: 199 89% 32%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 160 65% 36%;
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 210 30% 95%;
+    --muted-foreground: 215 25% 38%;
+
+    --accent: 35 95% 52%;
+    --accent-foreground: 215 40% 12%;
+
+    --destructive: 0 84% 55%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 210 25% 85%;
+    --input: 210 25% 85%;
+    --ring: 199 89% 32%;
+
+    --row-even: 199 40% 97%;
+    --row-odd: 0 0% 100%;
+    --header-bg: 199 89% 28%;
+    --header-text: 0 0% 100%;
+    --pink-soft: 340 70% 65%;
+    --incident-slot-bg: 210 33% 97%;
+    --incident-slot-border: 199 35% 82%;
+    --incident-response-bg: 142 63% 62%;
+    --incident-response-foreground: 215 40% 12%;
+    --incident-response-border: 143 55% 42%;
+    --incident-pending-bg: 47 100% 96%;
+    --incident-pending-foreground: 35 78% 35%;
+    --incident-pending-border: 42 90% 62%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-family: 'Inter', sans-serif;
+    font-size: 15px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-bold tracking-tight;
+  }
+}
+
+@layer components {
+  .schedule-table {
+    @apply w-full border-collapse;
+  }
+  
+  .schedule-header {
+    @apply bg-header text-header-foreground font-semibold text-sm py-3 px-4 text-left;
+  }
+  
+  .schedule-row-even {
+    @apply bg-row-even;
+  }
+  
+  .schedule-row-odd {
+    @apply bg-row-odd;
+  }
+  
+  .schedule-cell {
+    @apply py-2 px-3 text-sm border-b border-border;
+  }
+  
+  .badge-s {
+    @apply bg-badge-s text-white text-xs font-bold px-2 py-1 rounded;
+  }
+  
+  .badge-b {
+    @apply bg-badge-b text-white text-xs font-bold px-2 py-1 rounded;
+  }
+
+  .incident-live-slot {
+    @apply rounded-xl border p-3;
+    min-height: 12rem;
+    border-color: hsl(var(--incident-slot-border));
+    background: linear-gradient(180deg, hsl(var(--card)), hsl(var(--incident-slot-bg)));
+    box-shadow: inset 0 1px 0 hsl(var(--background)), 0 10px 18px -18px hsl(var(--foreground) / 0.35);
+  }
+
+  .incident-live-empty {
+    @apply flex items-center justify-center rounded-xl border border-dashed px-4 text-center text-sm text-muted-foreground;
+    min-height: 8rem;
+    background-color: hsl(var(--background) / 0.75);
+  }
+
+  .incident-response-card {
+    @apply rounded-xl border p-3 text-sm;
+    background-color: hsl(var(--incident-response-bg));
+    border-color: hsl(var(--incident-response-border));
+    color: hsl(var(--incident-response-foreground));
+  }
+
+  .incident-response-card--featured {
+    min-height: 6rem;
+  }
+
+  .incident-response-icon,
+  .incident-response-label,
+  .incident-response-body {
+    color: hsl(var(--incident-response-foreground));
+  }
+
+  .incident-response-meta {
+    color: hsl(var(--incident-response-foreground) / 0.68);
+  }
+
+  .incident-response-read-button {
+    @apply mt-2 inline-flex items-center rounded-md px-2.5 py-1 text-xs font-bold underline-offset-2 transition-colors hover:no-underline;
+    background-color: hsl(var(--card) / 0.28);
+    color: hsl(var(--incident-response-foreground));
+  }
+
+  .incident-response-delete {
+    color: hsl(var(--incident-response-foreground) / 0.6);
+  }
+
+  .incident-response-delete:hover {
+    color: hsl(var(--incident-response-foreground));
+  }
+
+  .incident-pending-card {
+    @apply flex flex-col justify-center gap-1.5 rounded-xl border border-dashed px-3 py-3 text-sm;
+    min-height: 4.75rem;
+    background-color: hsl(var(--incident-pending-bg));
+    border-color: hsl(var(--incident-pending-border));
+    color: hsl(var(--incident-pending-foreground));
+  }
+
+  .incident-pending-card--featured {
+    min-height: 6rem;
+  }
+}
+
+/* ERBI Report — polished markdown rendering */
+.erbi-report {
+  font-size: 14px;
+  line-height: 1.65;
+}
+
+.erbi-report h1 {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: hsl(var(--primary));
+  border-bottom: 2px solid hsl(var(--primary) / 0.3);
+  padding-bottom: 4px;
+  margin: 1rem 0 0.5rem;
+}
+
+.erbi-report h2 {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: hsl(var(--primary));
+  margin: 0.85rem 0 0.35rem;
+}
+
+.erbi-report h3 {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: hsl(var(--foreground));
+  margin: 0.75rem 0 0.25rem;
+}
+
+.erbi-report p {
+  font-size: 0.875rem;
+  line-height: 1.6;
+  margin: 0.35rem 0;
+}
+
+.erbi-report ul,
+.erbi-report ol {
+  padding-left: 1.25rem;
+  margin: 0.5rem 0;
+}
+
+.erbi-report li {
+  font-size: 0.875rem;
+  margin: 0.2rem 0;
+}
+
+.erbi-report strong {
+  color: hsl(var(--primary));
+  font-weight: 600;
+}
+
+.erbi-report table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.75rem 0;
+  font-size: 0.8rem;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  box-shadow: 0 1px 3px hsl(var(--primary) / 0.08);
+}
+
+.erbi-report thead th {
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+  font-weight: 600;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.erbi-report tbody td {
+  padding: 0.4rem 0.75rem;
+  border-bottom: 1px solid hsl(var(--border));
+}
+
+.erbi-report tbody tr:nth-child(even) {
+  background: hsl(var(--row-even));
+}
+
+.erbi-report tbody tr:hover {
+  background: hsl(var(--primary) / 0.06);
+}
+
+.erbi-report code {
+  background: hsl(var(--muted));
+  padding: 0.15rem 0.4rem;
+  border-radius: 0.25rem;
+  font-size: 0.8rem;
+}
+
+.erbi-report blockquote {
+  border-left: 3px solid hsl(var(--primary) / 0.4);
+  padding-left: 0.75rem;
+  margin: 0.5rem 0;
+  color: hsl(var(--muted-foreground));
+  font-style: italic;
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
+
+/* Bus stop alert button - neon pulse/glow animation */
+@keyframes bus-alert-pulse {
+  0%, 100% {
+    box-shadow: 0 0 4px 1px rgba(255, 102, 0, 0.4), 0 0 8px 2px rgba(255, 255, 0, 0.2);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 8px 3px rgba(255, 102, 0, 0.7), 0 0 16px 6px rgba(255, 255, 0, 0.35);
+    transform: scale(1.05);
+  }
+}
+
+.bus-alert-btn {
+  background: linear-gradient(135deg, #FF6600, #FFAA00);
+  color: white;
+  animation: bus-alert-pulse 1.5s ease-in-out infinite;
+}
+
+.bus-alert-btn:hover {
+  background: linear-gradient(135deg, #FF4400, #FF8800);
+}
+
+.bus-alert-btn-sent {
+  background: linear-gradient(135deg, #22c55e, #16a34a) !important;
+  animation: none !important;
+  box-shadow: 0 0 8px 2px rgba(34, 197, 94, 0.4) !important;
+}
