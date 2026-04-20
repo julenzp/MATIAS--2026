@@ -23,7 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { erbiSupabase } from "@/integrations/erbi/client";
+import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { getRouteDisplayName } from "@/lib/routes";
 import { useRoute } from "@/context/RouteContext";
@@ -53,16 +53,20 @@ interface DaySummary {
 
 const AVAILABLE_ROUTES = [
   { value: "ALL", label: "Guztiak / Todas" },
-  { value: "Matia Bermingham", label: "1. MATIA BERMINGHAM" },
-  { value: "Matia Fraisoro", label: "2. MATIA FRAISORO" },
-  { value: "Matia Fraisoro 2", label: "3. MATIA FRAISORO 2" },
-  { value: "Matia Igeldo", label: "4. MATIA IGELDO" },
-  { value: "Matia Lasarte", label: "5. MATIA LASARTE" },
-  { value: "Matia Rezola", label: "6. MATIA REZOLA" },
-  { value: "Matia Usurbil", label: "7. MATIA USURBIL" },
-  { value: "Matia Lamorouse", label: "8. MATIA LAMOROUSE" },
-  { value: "Matia Argixao 1", label: "9. MATIA ARGIXAO 1" },
-  { value: "Matia Argixao 2", label: "10. MATIA ARGIXAO 2" },
+  { value: "ASPACE", label: "1. ASPACE INTXAURRONDO" },
+  { value: "AMARAEN", label: "GUREAK, Amaraene" },
+  { value: "AMARAEN FINDE", label: "2. GUREAK, Amaraene FINDE" },
+  { value: "BERMINGHAM", label: "3. MATIA BERMINGHAM" },
+  { value: "EGILUZE", label: "MATIA EGILUZE" },
+  { value: "FRAISORO", label: "4. MATIA FRAISORO" },
+  { value: "FRAISORO_2", label: "5. MATIA FRAISORO 2" },
+  { value: "IGELDO", label: "6. MATIA IGELDO" },
+  { value: "LAMOROUSE", label: "7. MATIA LAMOROUSE" },
+  { value: "LASARTE", label: "8. MATIA LASARTE" },
+  { value: "MATIA", label: "9. MATIA REZOLA" },
+  { value: "EGURTZEGI", label: "10. MATIA USURBIL" },
+  { value: "ARGIXAO_1", label: "11. MATIA ARGIXAO BUS 1" },
+  { value: "ARGIXAO_2", label: "12. MATIA ARGIXAO BUS 2" },
 ];
 
 const isMorningTime = (time: string): boolean => {
