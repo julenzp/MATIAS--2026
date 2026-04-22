@@ -27,7 +27,7 @@
     --muted: 210 30% 95%;
     --muted-foreground: 215 25% 38%;
 
-    --accent: 326 100% 45%;
+    --accent: 326 100% 45% !important;
     --accent-foreground: 215 40% 12%;
 
     --destructive: 0 84% 55%;
@@ -47,7 +47,7 @@
     --header-bg: 338 100% 52%;
     --header-text: 0 0% 100%;
     --badge-s: 280 65% 52%;
-    --badge-b: 35 95% 48%;
+    --badge-b: 326 100% 45% !important;
     --pink-soft: 340 70% 65%;
     --incident-slot-bg: 210 33% 97%;
     --incident-slot-border: 338 35% 82%;
@@ -79,7 +79,7 @@
     --muted: 210 30% 95%;
     --muted-foreground: 215 25% 38%;
 
-    --accent: 326 100% 45%;
+    --accent: 326 100% 45% !important;
     --accent-foreground: 215 40% 12%;
 
     --destructive: 0 84% 55%;
