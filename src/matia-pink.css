@@ -1,0 +1,34 @@
+/* MATIA PINK OVERRIDE - Force pink colors */
+:root {
+  --primary: 326 100% 45% !important;
+  --primary-foreground: 0 0% 100% !important;
+  --secondary: 338 95% 50% !important;
+  --secondary-foreground: 0 0% 100% !important;
+  --accent: 326 100% 45% !important;
+  --accent-foreground: 215 40% 12% !important;
+  --ring: 326 100% 45% !important;
+  --route-morning: 326 100% 45% !important;
+  --route-afternoon: 338 95% 50% !important;
+  --header-bg: 338 100% 52% !important;
+  --header-text: 0 0% 100% !important;
+  --incident-pending-foreground: 338 100% 45% !important;
+  --incident-pending-border: 338 90% 62% !important;
+  --incident-slot-border: 338 35% 82% !important;
+}
+
+.dark {
+  --primary: 326 100% 45% !important;
+  --primary-foreground: 0 0% 100% !important;
+  --secondary: 338 95% 50% !important;
+  --secondary-foreground: 0 0% 100% !important;
+  --accent: 326 100% 45% !important;
+  --accent-foreground: 215 40% 12% !important;
+  --ring: 326 100% 45% !important;
+  --route-morning: 326 100% 45% !important;
+  --route-afternoon: 338 95% 50% !important;
+  --header-bg: 338 100% 52% !important;
+  --header-text: 0 0% 100% !important;
+  --incident-pending-foreground: 338 100% 45% !important;
+  --incident-pending-border: 338 90% 62% !important;
+  --incident-slot-border: 338 35% 82% !important;
+}

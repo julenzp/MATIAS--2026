@@ -1,6 +1,7 @@
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
+import "./matia-pink.css";
 
 const APP_BUILD_ID = __APP_BUILD_ID__;
 const BUILD_ID_STORAGE_KEY = "erbi:app_build_id";
