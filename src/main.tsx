@@ -3,6 +3,9 @@ import App from "./App.tsx";
 import "./index.css";
 import "./matia-pink.css";
 
+// MATIA BUILD 2026-04-22 10:46 - FORCE REBUILD WITH PINK COLORS
+console.log("🎀 MATIA App v0.0.1 loaded - Pink colors enabled 2026-04-22");
+
 const APP_BUILD_ID = __APP_BUILD_ID__;
 const BUILD_ID_STORAGE_KEY = "erbi:app_build_id";
 const BUILD_RESET_LOCK_KEY = "erbi:build_reset_lock";
