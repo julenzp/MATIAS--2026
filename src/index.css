@@ -27,7 +27,7 @@
     --muted: 210 30% 95%;
     --muted-foreground: 215 25% 38%;
 
-    --accent: 35 95% 52%;
+    --accent: 338 100% 57%;
     --accent-foreground: 215 40% 12%;
 
     --destructive: 0 84% 55%;
@@ -55,8 +55,8 @@
     --incident-response-foreground: 215 40% 12%;
     --incident-response-border: 143 55% 42%;
     --incident-pending-bg: 47 100% 96%;
-    --incident-pending-foreground: 35 78% 35%;
-    --incident-pending-border: 42 90% 62%;
+    --incident-pending-foreground: 338 100% 45%;
+    --incident-pending-border: 338 90% 62%;
   }
 
   /* Sin modo oscuro forzado - la app es para personas mayores, siempre claro */
@@ -79,7 +79,7 @@
     --muted: 210 30% 95%;
     --muted-foreground: 215 25% 38%;
 
-    --accent: 35 95% 52%;
+    --accent: 338 100% 57%;
     --accent-foreground: 215 40% 12%;
 
     --destructive: 0 84% 55%;
@@ -100,8 +100,8 @@
     --incident-response-foreground: 215 40% 12%;
     --incident-response-border: 143 55% 42%;
     --incident-pending-bg: 47 100% 96%;
-    --incident-pending-foreground: 35 78% 35%;
-    --incident-pending-border: 42 90% 62%;
+    --incident-pending-foreground: 338 100% 45%;
+    --incident-pending-border: 338 90% 62%;
   }
 }
 
