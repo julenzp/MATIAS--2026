@@ -17,7 +17,7 @@
     --popover-foreground: 215 40% 12%;
 
     /* Azul corporativo ERBI vibrante y visible */
-    --primary: 338 100% 57%;
+    --primary: 326 100% 45%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 338 95% 50%;
@@ -27,7 +27,7 @@
     --muted: 210 30% 95%;
     --muted-foreground: 215 25% 38%;
 
-    --accent: 338 100% 57%;
+    --accent: 326 100% 45%;
     --accent-foreground: 215 40% 12%;
 
     --destructive: 0 84% 55%;
@@ -35,12 +35,12 @@
 
     --border: 210 25% 85%;
     --input: 210 25% 85%;
-    --ring: 338 100% 57%;
+    --ring: 326 100% 45%;
 
     --radius: 0.75rem;
 
     /* Custom transport colors */
-    --route-morning: 338 100% 57%;
+    --route-morning: 326 100% 45%;
     --route-afternoon: 338 95% 50%;
     --row-even: 338 100% 97%;
     --row-odd: 0 0% 100%;
@@ -70,7 +70,7 @@
     --popover: 0 0% 100%;
     --popover-foreground: 215 40% 12%;
 
-    --primary: 338 100% 57%;
+    --primary: 326 100% 45%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 338 95% 50%;
@@ -79,7 +79,7 @@
     --muted: 210 30% 95%;
     --muted-foreground: 215 25% 38%;
 
-    --accent: 338 100% 57%;
+    --accent: 326 100% 45%;
     --accent-foreground: 215 40% 12%;
 
     --destructive: 0 84% 55%;
@@ -87,7 +87,7 @@
 
     --border: 210 25% 85%;
     --input: 210 25% 85%;
-    --ring: 338 100% 57%;
+    --ring: 326 100% 45%;
 
     --row-even: 338 100% 97%;
     --row-odd: 0 0% 100%;
