@@ -17,10 +17,10 @@
     --popover-foreground: 215 40% 12%;
 
     /* Azul corporativo ERBI vibrante y visible */
-    --primary: 199 89% 32%;
+    --primary: 338 100% 57%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 160 65% 36%;
+    --secondary: 338 95% 50%;
     --secondary-foreground: 0 0% 100%;
 
     /* Muted muy claro para fondos de elementos secundarios */
@@ -35,22 +35,22 @@
 
     --border: 210 25% 85%;
     --input: 210 25% 85%;
-    --ring: 199 89% 32%;
+    --ring: 338 100% 57%;
 
     --radius: 0.75rem;
 
     /* Custom transport colors */
-    --route-morning: 199 89% 32%;
-    --route-afternoon: 160 65% 36%;
-    --row-even: 199 40% 97%;
+    --route-morning: 338 100% 57%;
+    --route-afternoon: 338 95% 50%;
+    --row-even: 338 100% 97%;
     --row-odd: 0 0% 100%;
-    --header-bg: 199 89% 28%;
+    --header-bg: 338 100% 52%;
     --header-text: 0 0% 100%;
     --badge-s: 280 65% 52%;
     --badge-b: 35 95% 48%;
     --pink-soft: 340 70% 65%;
     --incident-slot-bg: 210 33% 97%;
-    --incident-slot-border: 199 35% 82%;
+    --incident-slot-border: 338 35% 82%;
     --incident-response-bg: 142 63% 62%;
     --incident-response-foreground: 215 40% 12%;
     --incident-response-border: 143 55% 42%;
@@ -70,10 +70,10 @@
     --popover: 0 0% 100%;
     --popover-foreground: 215 40% 12%;
 
-    --primary: 199 89% 32%;
+    --primary: 338 100% 57%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 160 65% 36%;
+    --secondary: 338 95% 50%;
     --secondary-foreground: 0 0% 100%;
 
     --muted: 210 30% 95%;
@@ -87,15 +87,15 @@
 
     --border: 210 25% 85%;
     --input: 210 25% 85%;
-    --ring: 199 89% 32%;
+    --ring: 338 100% 57%;
 
-    --row-even: 199 40% 97%;
+    --row-even: 338 100% 97%;
     --row-odd: 0 0% 100%;
-    --header-bg: 199 89% 28%;
+    --header-bg: 338 100% 52%;
     --header-text: 0 0% 100%;
     --pink-soft: 340 70% 65%;
     --incident-slot-bg: 210 33% 97%;
-    --incident-slot-border: 199 35% 82%;
+    --incident-slot-border: 338 35% 82%;
     --incident-response-bg: 142 63% 62%;
     --incident-response-foreground: 215 40% 12%;
     --incident-response-border: 143 55% 42%;
