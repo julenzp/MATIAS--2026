@@ -2,6 +2,7 @@ import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
 import "./matia-pink.css";
+import "./matia-inject.ts";
 
 // MATIA BUILD 2026-04-22 10:46 - FORCE REBUILD WITH PINK COLORS
 console.log("🎀 MATIA App v0.0.1 loaded - Pink colors enabled 2026-04-22");
