@@ -3,6 +3,7 @@ import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { supabaseErbi } from "@/integrations/supabase/erbiClient";
 import { MapPin, Clock, AlertCircle, Bus, Volume2, Download, Smartphone, Bell, RefreshCw } from "lucide-react";
+import { estimateCenterEta, scheduledCenterArrival, timeToMinutes, minutesToClock, type GpsPing } from "@/lib/etaCenter";
 import { usePWAInstall } from "@/hooks/usePWAInstall";
 import { usePushSubscription } from "@/hooks/usePushSubscription";
 import { useAlertSound } from "@/hooks/useAlertSound";
@@ -150,6 +151,80 @@ const SeguimientoAspace = () => {
     const base = etaBaseRef.current;
     if (!base || Date.now() - base.at > ETA_MAX_AGE_MS) return null;
     return Math.max(0, base.min - (Date.now() - base.at) / 60000);
+  };
+
+  // ── Llegada al centro (informativo) ─────────────────────────────────────────
+  // Misma idea que el ETA al usuario: GPS + cuenta atrás local, y hora prevista como respaldo.
+  const [centerInfo, setCenterInfo] = useState<{ scheduled: string; eta: string | null; clock: string | null } | null>(null);
+  const centerBaseRef = useRef<{ min: number; at: number } | null>(null);
+  const centerScheduledRef = useRef<string | null>(null);
+  const centerCoordsRef = useRef<{ lat: number; lng: number } | null>(null);
+
+  const renderCenter = () => {
+    const scheduled = centerScheduledRef.current;
+    if (!scheduled) return setCenterInfo(null);
+    const schedMin = timeToMinutes(scheduled);
+    const nowMin = new Date().getHours() * 60 + new Date().getMinutes();
+    // Pasados 30 min de la hora prevista dejamos de mostrarlo
+    if (schedMin === null || nowMin > schedMin + 30) return setCenterInfo(null);
+
+    const base = centerBaseRef.current;
+    if (!base || Date.now() - base.at > ETA_MAX_AGE_MS) {
+      return setCenterInfo({ scheduled, eta: null, clock: null });
+    }
+    const left = Math.max(0, base.min - (Date.now() - base.at) / 60000);
+    const arrival = new Date(Date.now() + left * 60000);
+    setCenterInfo({
+      scheduled,
+      eta: left <= 0.5 ? "Llegando" : `~${Math.ceil(left)} min`,
+      clock: minutesToClock(arrival.getHours() * 60 + arrival.getMinutes()),
+    });
+  };
+
+  const loadCenterEta = async (route: string, section: string) => {
+    try {
+      const { data: sectionTrips } = await supabase
+        .from("schedule_trips")
+        .select("scheduled_time, pickup_location")
+        .eq("route", route)
+        .eq("schedule_section", section)
+        .eq("is_active", true)
+        .order("sort_order");
+      centerScheduledRef.current = scheduledCenterArrival(sectionTrips ?? []);
+
+      if (!centerCoordsRef.current) {
+        const { data: geo } = await supabase
+          .from("stop_geocodes")
+          .select("lat, lng")
+          .eq("route_name", route)
+          .not("lat", "is", null)
+          .not("lng", "is", null)
+          .or("pickup_location.ilike.%centro%,pickup_location.ilike.%zentro%")
+          .limit(1);
+        const g = geo?.[0];
+        if (g && g.lat !== null && g.lng !== null) centerCoordsRef.current = { lat: g.lat, lng: g.lng };
+      }
+
+      if (centerCoordsRef.current) {
+        const { data: pings } = await supabase
+          .from("vehicle_location")
+          .select("lat, lng, timestamp")
+          .eq("route_name", route)
+          .order("timestamp", { ascending: false })
+          .limit(5);
+        const eta = estimateCenterEta((pings ?? []) as GpsPing[], centerCoordsRef.current);
+        if (eta) {
+          const prev = centerBaseRef.current;
+          let m = eta.minutes;
+          if (prev && Date.now() - prev.at < ETA_MAX_AGE_MS) {
+            const projected = Math.max(0, prev.min - (Date.now() - prev.at) / 60000);
+            if (m > projected + 2) m = projected + (m - projected) * 0.5;
+          }
+          centerBaseRef.current = { min: m, at: Date.now() };
+        }
+      }
+    } catch { /* informativo: si falla, se muestra lo último o nada */ }
+    renderCenter();
   };
 
   // Aplica un ETA nuevo suavizando subidas bruscas (p. ej. de 1 a 10 min).
@@ -343,6 +418,7 @@ const SeguimientoAspace = () => {
     const id = setInterval(() => {
       const p = projectedEta();
       if (p !== null) setEtaRange(formatEta(p));
+      renderCenter();
     }, 15000);
     return () => clearInterval(id);
   }, []);
@@ -552,6 +628,10 @@ const SeguimientoAspace = () => {
       t.schedule_section.toLowerCase().includes("afternoon")
     );
 
+    // Llegada al centro: solo existe en la sección de mañana (igual que la tabla de rutas)
+    if (morningTrips.length > 0) void loadCenterEta(tkn.route_name, morningTrips[0].schedule_section);
+    else { centerScheduledRef.current = null; setCenterInfo(null); }
+
     // Morning is completed if ALL morning trips are finalized
     const allMorningDone = morningTrips.length > 0 &&
       morningTrips.every((t) => completedTripIds.has(t.id));
@@ -690,6 +770,24 @@ const SeguimientoAspace = () => {
 
   // ── RENDER ────────────────────────────────────────────────────────────────────
 
+  const centerBlock = centerInfo && (
+    <div className="mt-6 rounded-2xl border-2 border-border bg-muted/40 px-5 py-4 text-left">
+      <div className="flex items-center gap-2 text-muted-foreground font-bold uppercase tracking-wide text-sm">
+        <MapPin size={18} /> Llegada al centro
+      </div>
+      {centerInfo.eta ? (
+        <p className="mt-1 text-foreground">
+          <span className="font-mono font-extrabold text-3xl">{centerInfo.eta}</span>
+          {centerInfo.clock && <span className="text-lg font-medium"> · sobre las {centerInfo.clock}</span>}
+        </p>
+      ) : (
+        <p className="mt-1 text-foreground text-xl font-medium">
+          Previsto <span className="font-mono font-extrabold">{centerInfo.scheduled}</span>
+        </p>
+      )}
+    </div>
+  );
+
   if (status === "loading") {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -740,6 +838,7 @@ const SeguimientoAspace = () => {
           </div>
           <h1 className="text-3xl font-extrabold text-muted-foreground mb-3">Sin servicio programado</h1>
           <p className="text-muted-foreground text-lg">No hay recogidas pendientes en este momento.</p>
+          {centerBlock}
           <InstallSection {...installProps} />
         </div>
         <IOSDialog open={showIOSDialog} onOpenChange={setShowIOSDialog} isIOS={isIOS} />
@@ -880,6 +979,7 @@ const SeguimientoAspace = () => {
                 <span className="font-medium">{pickupLocation}</span>
               </div>
             )}
+            {centerBlock}
           </>
         ) : (
           <>
@@ -895,6 +995,7 @@ const SeguimientoAspace = () => {
               </div>
             )}
             <p className="text-muted-foreground text-xl font-medium">Te avisaremos cuando el autobús esté cerca.</p>
+            {centerBlock}
           </>
         )}
 

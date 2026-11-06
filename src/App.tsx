@@ -38,7 +38,6 @@ const Install = lazy(() => import("./pages/Install"));
 const InstallRoute = lazy(() => import("./pages/InstallRoute"));
 const SeguimientoAspace = lazy(() => import("./pages/SeguimientoAspace"));
 const DemoSeguimiento = lazy(() => import("./pages/DemoSeguimiento"));
-const SeguimientoCentroAspace = lazy(() => import("./pages/SeguimientoCentroAspace"));
 const OperativeAssistantPage = lazy(() => import("./pages/OperativeAssistant"));
 const DashboardOperativo = lazy(() => import("./pages/DashboardOperativo"));
 const DashboardInteligente = lazy(() => import("./pages/DashboardInteligente"));
@@ -167,7 +166,6 @@ const App = () => (
                   <Route path="/install-route" element={<InstallRoute />} />
                   <Route path="/seguimiento-aspace/:token" element={<SeguimientoAspace />} />
                   <Route path="/t/:token" element={<SeguimientoAspace />} />
-                  <Route path="/centro/:token" element={<SeguimientoCentroAspace />} />
                   <Route path="/demo-seguimiento" element={<DemoSeguimiento />} />
                   <Route path="/asistente-operativo" element={<OperativeAssistantPage />} />
                   <Route path="/dashboard-operativo" element={<DashboardOperativo />} />

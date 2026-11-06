@@ -65,3 +65,28 @@ export function estimateCenterEta(
   const minutes = (distanceKm / speedKmh) * 60 - pingAgeSec / 60;
   return { minutes: Math.max(0, minutes), distanceKm, speedKmh, pingAgeSec };
 }
+
+const pad2 = (n: number) => String(n).padStart(2, "0");
+
+export const timeToMinutes = (t: string): number | null => {
+  const [h, m] = t.split(":").map(Number);
+  return Number.isFinite(h) && Number.isFinite(m) ? h * 60 + m : null;
+};
+
+export const minutesToClock = (m: number) => `${pad2(Math.floor(m / 60) % 24)}:${pad2(m % 60)}`;
+
+/**
+ * Hora prevista de llegada al centro de una sección (misma regla que la tabla de rutas):
+ * hora de ZENTRO si existe; si no, última parada + 10 min.
+ */
+export function scheduledCenterArrival(
+  trips: { scheduled_time: string; pickup_location: string | null }[]
+): string | null {
+  if (trips.length === 0) return null;
+  const zentro = trips.find((t) => /zentro|centro/i.test(t.pickup_location ?? ""));
+  if (zentro) return zentro.scheduled_time.slice(0, 5);
+  const real = trips.filter((t) => !/zentro|centro/i.test(t.pickup_location ?? ""));
+  const last = real[real.length - 1];
+  const m = last ? timeToMinutes(last.scheduled_time) : null;
+  return m === null ? null : minutesToClock(m + 10);
+}
