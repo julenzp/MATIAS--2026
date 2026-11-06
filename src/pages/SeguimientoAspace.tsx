@@ -138,6 +138,31 @@ const SeguimientoAspace = () => {
   const [alertScopeKey, setAlertScopeKey] = useState("");
   const prevStatusRef = useRef<TrackingStatus>("loading");
   const alertPlayedRef = useRef(false);
+
+  // Último ETA por GPS (minutos + momento). Permite mantener el tiempo visible
+  // y descontarlo localmente aunque el GPS falle o tarde en responder.
+  const etaBaseRef = useRef<{ min: number; at: number } | null>(null);
+  const ETA_MAX_AGE_MS = 5 * 60000;
+
+  const formatEta = (m: number) => (m <= 0.5 ? "Llegando" : `~${Math.ceil(m)} min`);
+
+  const projectedEta = () => {
+    const base = etaBaseRef.current;
+    if (!base || Date.now() - base.at > ETA_MAX_AGE_MS) return null;
+    return Math.max(0, base.min - (Date.now() - base.at) / 60000);
+  };
+
+  // Aplica un ETA nuevo suavizando subidas bruscas (p. ej. de 1 a 10 min).
+  const applyGpsEta = (newMin: number) => {
+    const projected = projectedEta();
+    let m = newMin;
+    if (projected !== null && newMin > projected + 2) {
+      m = Math.round(projected + (newMin - projected) * 0.5);
+    }
+    etaBaseRef.current = { min: m, at: Date.now() };
+    setEtaRange(formatEta(m));
+    return m;
+  };
   const touchStartYRef = useRef<number | null>(null);
   const pullDistanceRef = useRef(0);
   const { isUnlocked: isAudioUnlocked, play: playAlertSound, unlockAndPlay } = useAlertSound();
@@ -311,6 +336,15 @@ const SeguimientoAspace = () => {
     setIsRefreshing(true);
     setLastRefresh(new Date());
     window.setTimeout(() => setIsRefreshing(false), 800);
+  }, []);
+
+  // Descuenta el ETA localmente cada 15 s (sin llamadas al servidor, sin coste)
+  useEffect(() => {
+    const id = setInterval(() => {
+      const p = projectedEta();
+      if (p !== null) setEtaRange(formatEta(p));
+    }, 15000);
+    return () => clearInterval(id);
   }, []);
 
   // Recarga por timer cada 20 segundos (más rápido)
@@ -596,9 +630,15 @@ const SeguimientoAspace = () => {
         const { data: etaData, error: etaError } = await supabase.functions.invoke("calculate-eta", {
           body: { route_name: tkn.route_name, passenger_id: tkn.passenger_id },
         });
-        if (!etaError && etaData && etaData.eta_minutes !== null) setEtaRange(`~${etaData.eta_minutes} min`);
-        else setEtaRange("~1-3 min");
-      } catch { setEtaRange("~1-3 min"); }
+        if (!etaError && etaData && etaData.eta_minutes != null) applyGpsEta(Number(etaData.eta_minutes));
+        else {
+          const p = projectedEta();
+          setEtaRange(p !== null ? formatEta(p) : "~1-3 min");
+        }
+      } catch {
+        const p = projectedEta();
+        setEtaRange(p !== null ? formatEta(p) : "~1-3 min");
+      }
       setStatus("preparate");
       return;
     }
@@ -608,14 +648,21 @@ const SeguimientoAspace = () => {
       const { data: etaData, error: etaError } = await supabase.functions.invoke("calculate-eta", {
         body: { route_name: tkn.route_name, passenger_id: tkn.passenger_id },
       });
-      if (!etaError && etaData && etaData.eta_minutes !== null) {
-        const eta = etaData.eta_minutes;
-        setEtaRange(`~${eta} min`);
+      if (!etaError && etaData && etaData.eta_minutes != null) {
+        const eta = applyGpsEta(Number(etaData.eta_minutes));
         // Umbral: ≤ 8 min → ¡Prepárate!
         setStatus(eta <= 8 ? "preparate" : "en_curso");
         return;
       }
     } catch { /* fall through */ }
+
+    // GPS sin respuesta: mantener el último ETA descontando el tiempo transcurrido
+    const projected = projectedEta();
+    if (projected !== null) {
+      setEtaRange(formatEta(projected));
+      setStatus(projected <= 8 ? "preparate" : "en_curso");
+      return;
+    }
 
     // Sin GPS: usar fallback por paradas completadas o hora programada
     if (lastCompletedIndex >= 0) {

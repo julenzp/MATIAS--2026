@@ -2,7 +2,7 @@ import { useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 /**
- * Hook that sends bus GPS pings every 60 seconds while the route is active.
+ * Hook that sends bus GPS pings every 20 seconds while the route is active.
  * Only activates for ASPACE route when `enabled` is true.
  */
 export function useVehicleTracking(routeName: string, enabled: boolean) {
@@ -34,12 +34,12 @@ export function useVehicleTracking(routeName: string, enabled: boolean) {
         };
       },
       (err) => console.warn("GPS error:", err.message),
-      { enableHighAccuracy: true, maximumAge: 30000 }
+      { enableHighAccuracy: true, maximumAge: 5000 }
     );
 
-    // Send ping every 60 seconds
+    // Send ping every 20 seconds (más preciso para el ETA)
     sendPing(); // First ping immediately
-    intervalRef.current = setInterval(sendPing, 60000);
+    intervalRef.current = setInterval(sendPing, 20000);
 
     return () => {
       if (watchIdRef.current !== null) {
