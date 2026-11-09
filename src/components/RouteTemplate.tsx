@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScheduleTable } from "@/components/ScheduleTable";
 import { ContactsList } from "@/components/ContactsList";
 import { DigitalClock } from "@/components/DigitalClock";
+import { NextStopTimer } from "@/components/NextStopTimer";
 import { RouteNotifications } from "@/components/RouteNotifications";
 import { NotificationBell } from "@/components/NotificationBell";
 import { useScheduleData } from "@/hooks/useScheduleData";
@@ -518,6 +519,11 @@ export const RouteTemplate = ({
             <div className="flex justify-center">
               <DigitalClock variant="afternoon" />
             </div>
+
+            {/* Temporizador a la próxima parada (solo FRAISORO_2, tarde) */}
+            {routeCode === "FRAISORO_2" && (
+              <NextStopTimer sections={[afternoonFirst, afternoonSecond, afternoonThird]} />
+            )}
 
             <div className="flex items-center justify-center gap-3 text-muted-foreground">
               <div className="flex items-center gap-2 bg-muted px-3 py-2 rounded-lg">
