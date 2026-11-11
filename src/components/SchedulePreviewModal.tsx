@@ -157,6 +157,10 @@ export function SchedulePreviewModal({
   const handleConfirm = async () => {
     setSaving(true);
     try {
+      // Validar formato de hora antes de escribir nada
+      for (const [, t] of Object.entries(timeOverrides)) {
+        if (!/^\d{1,2}:\d{2}$/.test(t)) throw new Error(`Hora no válida: "${t}" (usa HH:MM)`);
+      }
       // Collect all changes to apply
       const updates: { id: string; scheduled_time?: string; pickup_location?: string }[] = [];
       const previewRows = getPreviewRows();
@@ -187,7 +191,8 @@ export function SchedulePreviewModal({
       // Apply all updates
       for (const u of updates) {
         const { id, ...data } = u;
-        await supabase.from('schedule_trips').update({ ...data, updated_at: new Date().toISOString() }).eq('id', id);
+        const { error: updError } = await supabase.from('schedule_trips').update({ ...data, updated_at: new Date().toISOString() }).eq('id', id);
+        if (updError) throw new Error(updError.message);
       }
 
       toast.success(`${updates.length} cambio${updates.length !== 1 ? 's' : ''} aplicado${updates.length !== 1 ? 's' : ''} en ${sectionLabel} ✓`, { duration: 4000 });
@@ -198,8 +203,8 @@ export function SchedulePreviewModal({
         route,
       });
 
-      onOpenChange(false);
       onConfirmed();
+      onOpenChange(false);
     } catch (err: any) {
       toast.error('Error al aplicar cambios: ' + (err?.message || 'Error desconocido'));
     } finally {
