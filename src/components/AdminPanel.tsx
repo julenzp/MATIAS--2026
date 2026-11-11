@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -225,6 +225,16 @@ export function AdminPanel({ hideTrigger = false }: { hideTrigger?: boolean } = 
 
   // Schedule preview modal state
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
+  // Cola de secciones pendientes de previsualizar (cuando se cambian varias horas a la vez)
+  type PreviewItem = {
+    tripId: string;
+    section: string;
+    label: string;
+    route: string;
+    changes: { tripId: string; field: 'scheduled_time' | 'pickup_location'; oldValue: string; newValue: string }[];
+  };
+  const previewQueueRef = useRef<PreviewItem[]>([]);
+  const previewAdvancingRef = useRef(false);
   const [previewModalSection, setPreviewModalSection] = useState('');
   const [previewModalSectionLabel, setPreviewModalSectionLabel] = useState('');
   const [previewModalRoute, setPreviewModalRoute] = useState('');
@@ -405,6 +415,22 @@ export function AdminPanel({ hideTrigger = false }: { hideTrigger?: boolean } = 
   const timeToMinutes = (time: string): number => {
     const [hours, minutes] = time.split(':').map(Number);
     return hours * 60 + (minutes || 0);
+  };
+
+  // Normaliza una hora escrita a mano a HH:MM. Devuelve null si no es válida.
+  const normalizeTime = (raw: string): string | null => {
+    const s = (raw || '').trim().replace(/[.,h]/gi, ':');
+    const m = s.match(/^(\d{1,2}):(\d{2})$/) || s.match(/^(\d{1,2})(\d{2})$/);
+    if (!m) return null;
+    const h = Number(m[1]);
+    const min = Number(m[2]);
+    if (h > 23 || min > 59) return null;
+    return `${h.toString().padStart(2, '0')}:${min.toString().padStart(2, '0')}`;
+  };
+
+  // Lanza un error si Supabase devolvió uno (las llamadas no lanzan por sí solas)
+  const assertOk = (res: { error: { message: string } | null }, ctx: string) => {
+    if (res.error) throw new Error(`${ctx}: ${res.error.message}`);
   };
 
   // Helper function to convert minutes to time string (always HH:MM format)
@@ -606,10 +632,11 @@ export function AdminPanel({ hideTrigger = false }: { hideTrigger?: boolean } = 
     // Update each trip with correct sort_order based on time order
     for (let i = 0; i < sectionTrips.length; i++) {
       const trip = sectionTrips[i];
-      await supabase
+      const res = await supabase
         .from('schedule_trips')
         .update({ sort_order: i + 1 })
         .eq('id', trip.id);
+      assertOk(res, 'Error al reordenar la sección');
     }
   };
 
@@ -665,14 +692,15 @@ export function AdminPanel({ hideTrigger = false }: { hideTrigger?: boolean } = 
     // Shift sort_orders
     const tripsToShift = sectionTrips.filter(t => t.sort_order >= insertPosition);
     for (const trip of tripsToShift) {
-      await supabase
+      const res = await supabase
         .from('schedule_trips')
         .update({ sort_order: trip.sort_order + 1 })
         .eq('id', trip.id);
+      assertOk(res, 'Error al desplazar viajes');
     }
 
     // Insert the new trip
-    await supabase.from('schedule_trips').insert({
+    const insertRes = await supabase.from('schedule_trips').insert({
       passenger_id: passengerId,
       schedule_section: section,
       scheduled_time: newTime,
@@ -681,6 +709,7 @@ export function AdminPanel({ hideTrigger = false }: { hideTrigger?: boolean } = 
       is_active: true,
       route,
     });
+    assertOk(insertRes, 'Error al insertar el viaje');
 
     // Recalculate times for subsequent trips if requested
     if (adjustExisting && shouldMaintainCorrelation) {
@@ -709,33 +738,39 @@ export function AdminPanel({ hideTrigger = false }: { hideTrigger?: boolean } = 
   const handleCollisionConfirmAdjust = async () => {
     if (!collisionData) return;
     setIsSaving(true);
-    if (collisionData.isEdit && collisionData.editTripId) {
-      // Edit: update existing trip time + sort_order, then recalculate
-      const newSortOrder = await calculateSortOrderByTime(collisionData.newTime, collisionData.section, collisionData.route, collisionData.editTripId);
-      await supabase.from('schedule_trips').update({
-        scheduled_time: collisionData.newTime,
-        sort_order: newSortOrder,
-        updated_at: new Date().toISOString(),
-      }).eq('id', collisionData.editTripId);
-      await recalculateSectionSchedule(collisionData.section, collisionData.route);
-      // Recalculate times from the collision point
-      await recalculateTimesFromPosition(collisionData.section, collisionData.route, newSortOrder, collisionData.interval);
-      toast.success(`Horario actualizado a ${collisionData.newTime}. Horarios posteriores ajustados ✓`);
-      showOperatorConfirmation({ actionType: 'update', description: `Horario actualizado a ${collisionData.newTime}`, table: 'Horarios/Viajes', route: collisionData.route });
-    } else {
-      await executeInsertTrip(
-        collisionData.passengerId, collisionData.location, collisionData.section,
-        collisionData.route, collisionData.newTime, collisionData.insertPosition,
-        collisionData.sectionTrips, collisionData.interval,
-        collisionData.shouldMaintainCorrelation, true
-      );
-      toast.success(`Insertado en "${collisionData.section}" a las ${collisionData.newTime}. Horarios posteriores ajustados ✓`);
-      showOperatorConfirmation({ actionType: 'insert', description: `Nuevo viaje a las ${collisionData.newTime}`, table: 'Horarios/Viajes', route: collisionData.route });
-      const hasPendingCollision = await continueSchedulesAfterCollision(collisionData);
-      if (hasPendingCollision) {
-        setIsSaving(false);
-        return;
+    try {
+      if (collisionData.isEdit && collisionData.editTripId) {
+        // Edit: update existing trip time + sort_order, then recalculate
+        const newSortOrder = await calculateSortOrderByTime(collisionData.newTime, collisionData.section, collisionData.route, collisionData.editTripId);
+        assertOk(await supabase.from('schedule_trips').update({
+          scheduled_time: collisionData.newTime,
+          sort_order: newSortOrder,
+          updated_at: new Date().toISOString(),
+        }).eq('id', collisionData.editTripId), 'Error al guardar la hora');
+        await recalculateSectionSchedule(collisionData.section, collisionData.route);
+        // Recalculate times from the collision point
+        await recalculateTimesFromPosition(collisionData.section, collisionData.route, newSortOrder, collisionData.interval);
+        toast.success(`Horario actualizado a ${collisionData.newTime}. Horarios posteriores ajustados ✓`);
+        showOperatorConfirmation({ actionType: 'update', description: `Horario actualizado a ${collisionData.newTime}`, table: 'Horarios/Viajes', route: collisionData.route });
+      } else {
+        await executeInsertTrip(
+          collisionData.passengerId, collisionData.location, collisionData.section,
+          collisionData.route, collisionData.newTime, collisionData.insertPosition,
+          collisionData.sectionTrips, collisionData.interval,
+          collisionData.shouldMaintainCorrelation, true
+        );
+        toast.success(`Insertado en "${collisionData.section}" a las ${collisionData.newTime}. Horarios posteriores ajustados ✓`);
+        showOperatorConfirmation({ actionType: 'insert', description: `Nuevo viaje a las ${collisionData.newTime}`, table: 'Horarios/Viajes', route: collisionData.route });
+        const hasPendingCollision = await continueSchedulesAfterCollision(collisionData);
+        if (hasPendingCollision) {
+          setIsSaving(false);
+          return;
+        }
       }
+    } catch (err: any) {
+      toast.error('Error al guardar: ' + (err?.message || 'Error desconocido'));
+      setIsSaving(false);
+      return;
     }
     setCollisionDialogOpen(false);
     setCollisionData(null);
@@ -747,28 +782,34 @@ export function AdminPanel({ hideTrigger = false }: { hideTrigger?: boolean } = 
   const handleCollisionSaveWithout = async () => {
     if (!collisionData) return;
     setIsSaving(true);
-    if (collisionData.isEdit && collisionData.editTripId) {
-      const newSortOrder = await calculateSortOrderByTime(collisionData.newTime, collisionData.section, collisionData.route, collisionData.editTripId);
-      await supabase.from('schedule_trips').update({
-        scheduled_time: collisionData.newTime,
-        sort_order: newSortOrder,
-        updated_at: new Date().toISOString(),
-      }).eq('id', collisionData.editTripId);
-      await recalculateSectionSchedule(collisionData.section, collisionData.route);
-      toast.success(`Horario actualizado a ${collisionData.newTime} sin mover horarios existentes ✓`);
-    } else {
-      await executeInsertTrip(
-        collisionData.passengerId, collisionData.location, collisionData.section,
-        collisionData.route, collisionData.newTime, collisionData.insertPosition,
-        collisionData.sectionTrips, collisionData.interval,
-        collisionData.shouldMaintainCorrelation, false
-      );
-      toast.success(`Insertado en "${collisionData.section}" a las ${collisionData.newTime} sin mover horarios existentes ✓`);
-      const hasPendingCollision = await continueSchedulesAfterCollision(collisionData);
-      if (hasPendingCollision) {
-        setIsSaving(false);
-        return;
+    try {
+      if (collisionData.isEdit && collisionData.editTripId) {
+        const newSortOrder = await calculateSortOrderByTime(collisionData.newTime, collisionData.section, collisionData.route, collisionData.editTripId);
+        assertOk(await supabase.from('schedule_trips').update({
+          scheduled_time: collisionData.newTime,
+          sort_order: newSortOrder,
+          updated_at: new Date().toISOString(),
+        }).eq('id', collisionData.editTripId), 'Error al guardar la hora');
+        await recalculateSectionSchedule(collisionData.section, collisionData.route);
+        toast.success(`Horario actualizado a ${collisionData.newTime} sin mover horarios existentes ✓`);
+      } else {
+        await executeInsertTrip(
+          collisionData.passengerId, collisionData.location, collisionData.section,
+          collisionData.route, collisionData.newTime, collisionData.insertPosition,
+          collisionData.sectionTrips, collisionData.interval,
+          collisionData.shouldMaintainCorrelation, false
+        );
+        toast.success(`Insertado en "${collisionData.section}" a las ${collisionData.newTime} sin mover horarios existentes ✓`);
+        const hasPendingCollision = await continueSchedulesAfterCollision(collisionData);
+        if (hasPendingCollision) {
+          setIsSaving(false);
+          return;
+        }
       }
+    } catch (err: any) {
+      toast.error('Error al guardar: ' + (err?.message || 'Error desconocido'));
+      setIsSaving(false);
+      return;
     }
     setCollisionDialogOpen(false);
     setCollisionData(null);
@@ -921,10 +962,11 @@ export function AdminPanel({ hideTrigger = false }: { hideTrigger?: boolean } = 
     for (const trip of allTrips) {
       if (trip.sort_order > startPosition) {
         currentTime += interval;
-        await supabase
+        const res = await supabase
           .from('schedule_trips')
           .update({ scheduled_time: minutesToTime(currentTime) })
           .eq('id', trip.id);
+        assertOk(res, 'Error al reajustar horas');
       }
     }
   };
@@ -1225,7 +1267,7 @@ export function AdminPanel({ hideTrigger = false }: { hideTrigger?: boolean } = 
     }
   };
 
-  const savePassenger = async () => {
+  const savePassengerInner = async () => {
     if (isSaving) return;
     
     if (!passengerForm.name.trim()) {
@@ -1237,6 +1279,18 @@ export function AdminPanel({ hideTrigger = false }: { hideTrigger?: boolean } = 
     if (selectedRoutes.length === 0) {
       toast.error('Selecciona al menos una ruta');
       return;
+    }
+
+    // Validar y normalizar las horas escritas a mano (HH:MM)
+    const normalizedTimes: Record<string, string> = {};
+    for (const [sec, raw] of Object.entries(routeCustomTimes)) {
+      if (!selectedRoutes.includes(sec) || !raw || !raw.trim()) continue;
+      const t = normalizeTime(raw);
+      if (!t) {
+        toast.error(`Hora no válida (${sec}): "${raw}". Escribe HH:MM, por ejemplo 08:30`);
+        return;
+      }
+      normalizedTimes[sec] = t;
     }
 
     setIsSaving(true);
@@ -1370,7 +1424,7 @@ export function AdminPanel({ hideTrigger = false }: { hideTrigger?: boolean } = 
       for (const section of routesToRemove) {
         const tripToRemove = currentTrips.find(t => t.schedule_section === section);
         if (tripToRemove) {
-          await supabase.from('schedule_trips').delete().eq('id', tripToRemove.id);
+          assertOk(await supabase.from('schedule_trips').delete().eq('id', tripToRemove.id), 'Error al quitar el viaje');
         }
       }
 
@@ -1382,7 +1436,7 @@ export function AdminPanel({ hideTrigger = false }: { hideTrigger?: boolean } = 
           regNum,
           routesToAdd,
           editingPassenger.route,
-          routeCustomTimes,
+          normalizedTimes,
           maintainCorrelation
         );
         if (hasCollision) return;
@@ -1390,14 +1444,15 @@ export function AdminPanel({ hideTrigger = false }: { hideTrigger?: boolean } = 
 
       // Update location and time for existing trips (with preview modal for schedule changes)
       const updatedTrips = currentTrips.filter(t => enforcedRoutes.includes(t.schedule_section));
+      const previewQueue: PreviewItem[] = [];
       for (const trip of updatedTrips) {
-        const newTime = routeCustomTimes[trip.schedule_section];
+        const newTime = normalizedTimes[trip.schedule_section];
         const timeChanged = newTime && newTime !== trip.scheduled_time;
         const locationChangedInTrip = (passengerForm.location || '') !== (trip.pickup_location || '');
         
-        // If schedule fields changed, show preview modal
+        // Si cambia hora o dirección, se encola la previsualización de esa sección
         if (timeChanged || locationChangedInTrip) {
-          const changes: { tripId: string; field: 'scheduled_time' | 'pickup_location'; oldValue: string; newValue: string }[] = [];
+          const changes: PreviewItem['changes'] = [];
           if (timeChanged) {
             changes.push({ tripId: trip.id, field: 'scheduled_time', oldValue: trip.scheduled_time, newValue: newTime });
           }
@@ -1407,27 +1462,34 @@ export function AdminPanel({ hideTrigger = false }: { hideTrigger?: boolean } = 
           
           const allSections = getRouteSections(editingPassenger.route);
           const sectionObj = allSections.find(s => s.value === trip.schedule_section);
-          
-          setPreviewModalSection(trip.schedule_section);
-          setPreviewModalSectionLabel(sectionObj?.label || trip.schedule_section);
-          setPreviewModalRoute(editingPassenger.route);
-          setPreviewModalTripId(trip.id);
-          setPreviewModalChanges(changes);
-          setIsPassengerDialogOpen(false);
-          setIsPreviewModalOpen(true);
-          setIsSaving(false);
-          return;
+          previewQueue.push({
+            tripId: trip.id,
+            section: trip.schedule_section,
+            label: sectionObj?.label || trip.schedule_section,
+            route: editingPassenger.route,
+            changes,
+          });
+          continue;
         }
         
         const updateData: Record<string, any> = { pickup_location: passengerForm.location || null, updated_at: new Date().toISOString() };
         
-        await supabase
-          .from('schedule_trips')
-          .update(updateData)
-          .eq('id', trip.id);
+        assertOk(
+          await supabase.from('schedule_trips').update(updateData).eq('id', trip.id),
+          'Error al actualizar el viaje'
+        );
         
         // Reorder the section
         await recalculateSectionSchedule(trip.schedule_section, editingPassenger.route);
+      }
+
+      // Hay cambios de horario: se previsualizan de uno en uno (ninguna sección se pierde)
+      if (previewQueue.length > 0) {
+        previewQueueRef.current = previewQueue.slice(1);
+        openPreviewItem(previewQueue[0]);
+        setIsPassengerDialogOpen(false);
+        setIsSaving(false);
+        return;
       }
       
       toast.success('Usuario y horarios actualizados ✓ Orden reajustado automáticamente', { duration: 4000 });
@@ -1456,7 +1518,7 @@ export function AdminPanel({ hideTrigger = false }: { hideTrigger?: boolean } = 
           regNum,
           enforcedRoutes,
           selectedRouteFilter,
-          routeCustomTimes,
+          normalizedTimes,
           maintainCorrelation
         );
         if (hasCollision) {
@@ -1472,6 +1534,25 @@ export function AdminPanel({ hideTrigger = false }: { hideTrigger?: boolean } = 
     setIsSaving(false);
     setIsPassengerDialogOpen(false);
     loadData();
+  };
+
+  const savePassenger = async () => {
+    try {
+      await savePassengerInner();
+    } catch (err: any) {
+      console.error('Error guardando pasajero/horarios:', err);
+      toast.error('Error al guardar: ' + (err?.message || 'Error desconocido'));
+      setIsSaving(false);
+    }
+  };
+
+  const openPreviewItem = (item: PreviewItem) => {
+    setPreviewModalSection(item.section);
+    setPreviewModalSectionLabel(item.label);
+    setPreviewModalRoute(item.route);
+    setPreviewModalTripId(item.tripId);
+    setPreviewModalChanges(item.changes);
+    setIsPreviewModalOpen(true);
   };
 
   // Deactivate passenger (dar de baja) - also deactivates all their trips
@@ -2692,7 +2773,7 @@ export function AdminPanel({ hideTrigger = false }: { hideTrigger?: boolean } = 
                             <Input
                               type="text"
                               placeholder={existingTrip?.scheduled_time || estimatedTime}
-                              value={routeCustomTimes[section.value] || existingTrip?.scheduled_time || ''}
+                              value={routeCustomTimes[section.value] ?? existingTrip?.scheduled_time ?? ''}
                               onChange={(e) => setRouteCustomTimes({
                                 ...routeCustomTimes,
                                 [section.value]: e.target.value
@@ -3457,8 +3538,14 @@ export function AdminPanel({ hideTrigger = false }: { hideTrigger?: boolean } = 
       <SchedulePreviewModal
         open={isPreviewModalOpen}
         onOpenChange={(open) => {
+          // Si se acaba de confirmar y hay otra sección en cola, la ventana sigue abierta con la siguiente
+          if (!open && previewAdvancingRef.current) {
+            previewAdvancingRef.current = false;
+            return;
+          }
           setIsPreviewModalOpen(open);
           if (!open) {
+            previewQueueRef.current = [];
             setPreviewModalChanges([]);
           }
         }}
@@ -3469,6 +3556,11 @@ export function AdminPanel({ hideTrigger = false }: { hideTrigger?: boolean } = 
         changes={previewModalChanges}
         onConfirmed={() => {
           loadData();
+          const next = previewQueueRef.current.shift();
+          if (next) {
+            previewAdvancingRef.current = true;
+            openPreviewItem(next);
+          }
         }}
       />
     </>

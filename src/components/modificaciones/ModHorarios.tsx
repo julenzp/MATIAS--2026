@@ -132,16 +132,19 @@ export function ModHorarios() {
       if (operation === 'cambiar_hora') {
         if (!newTime.match(/^\d{1,2}:\d{2}$/)) { toast.error('Formato de hora inválido (HH:MM)'); setSaving(false); return; }
         const old = selectedTrip.scheduled_time;
-        await supabase.from('schedule_trips').update({ scheduled_time: newTime, updated_at: new Date().toISOString() }).eq('id', selectedTrip.id);
+        const { error } = await supabase.from('schedule_trips').update({ scheduled_time: newTime, updated_at: new Date().toISOString() }).eq('id', selectedTrip.id);
+        if (error) throw error;
         await logModificacion('schedule_trips', selectedTrip.id, 'scheduled_time', old, newTime, motivo);
         toast.success(`Hora de ${selectedTrip.passenger_name} cambiada de ${old} a ${newTime}`);
       } else if (operation === 'cambiar_direccion') {
         const old = selectedTrip.pickup_location || '';
-        await supabase.from('schedule_trips').update({ pickup_location: newPickup, updated_at: new Date().toISOString() }).eq('id', selectedTrip.id);
+        const { error } = await supabase.from('schedule_trips').update({ pickup_location: newPickup, updated_at: new Date().toISOString() }).eq('id', selectedTrip.id);
+        if (error) throw error;
         await logModificacion('schedule_trips', selectedTrip.id, 'pickup_location', old, newPickup, motivo);
         toast.success(`Dirección de ${selectedTrip.passenger_name} actualizada`);
       } else if (operation === 'desactivar_viaje') {
-        await supabase.from('schedule_trips').update({ is_active: false, updated_at: new Date().toISOString() }).eq('id', selectedTrip.id);
+        const { error } = await supabase.from('schedule_trips').update({ is_active: false, updated_at: new Date().toISOString() }).eq('id', selectedTrip.id);
+        if (error) throw error;
         await logModificacion('schedule_trips', selectedTrip.id, 'is_active', 'true', 'false', motivo);
         toast.success(`Viaje de ${selectedTrip.passenger_name} desactivado`);
       }
