@@ -338,22 +338,19 @@ export const NotificationManager = ({ hideTrigger = false }: { hideTrigger?: boo
       toast.error("Selecciona un usuario y escribe un mensaje");
       return;
     }
-    if (!noteRange?.from) {
-      toast.error("Marca en el calendario el día o los días");
-      return;
-    }
 
     setSendingNote(true);
     try {
-      const validFrom = toDateStr(noteRange.from);
-      const validUntil = toDateStr(noteRange.to ?? noteRange.from);
+      // Sin fecha marcada: nota sin vigencia ni turno (solo el mensaje)
+      const validFrom = noteRange?.from ? toDateStr(noteRange.from) : null;
+      const validUntil = noteRange?.from ? toDateStr(noteRange.to ?? noteRange.from) : null;
 
       const { error } = await supabase.from("passenger_notes").insert({
         passenger_id: notePassengerId,
         message: finalMessage,
         valid_from: validFrom,
         valid_until: validUntil,
-        shift: noteShift,
+        shift: noteRange?.from ? noteShift : null,
       });
 
       if (error) throw error;
@@ -737,7 +734,7 @@ export const NotificationManager = ({ hideTrigger = false }: { hideTrigger?: boo
                   <Button
                     type="button"
                     onClick={() => sendPassengerNote(DEFAULT_ABSENCE_MESSAGE)}
-                    disabled={sendingNote || !noteRange?.from}
+                    disabled={sendingNote}
                     className="w-full gap-2 bg-amber-600 hover:bg-amber-700 text-white font-semibold"
                   >
                     <MessageSquareWarning size={16} />
@@ -756,7 +753,7 @@ export const NotificationManager = ({ hideTrigger = false }: { hideTrigger?: boo
                     type="button"
                     variant="outline"
                     onClick={() => sendPassengerNote()}
-                    disabled={sendingNote || !noteMessage.trim() || !noteRange?.from}
+                    disabled={sendingNote || !noteMessage.trim()}
                     className="w-full gap-2"
                   >
                     Añadir otro aviso
@@ -793,10 +790,12 @@ export const NotificationManager = ({ hideTrigger = false }: { hideTrigger?: boo
                           <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded">
                             {passenger?.route || "Sin ruta"}
                           </span>
-                          <span className="text-xs bg-amber-100 dark:bg-amber-800/50 text-amber-900 dark:text-amber-100 px-2 py-0.5 rounded flex items-center gap-1">
-                            <CalendarDays size={10} />
-                            {formatNoteRange(note)} · {shiftLabel(note.shift)}
-                          </span>
+                          {(note.valid_from || note.valid_until) && (
+                            <span className="text-xs bg-amber-100 dark:bg-amber-800/50 text-amber-900 dark:text-amber-100 px-2 py-0.5 rounded flex items-center gap-1">
+                              <CalendarDays size={10} />
+                              {formatNoteRange(note)} · {shiftLabel(note.shift)}
+                            </span>
+                          )}
                         </div>
                         <p className="text-sm mb-1 text-amber-900 dark:text-amber-100">{note.message}</p>
                         <div className="flex items-center justify-between">
