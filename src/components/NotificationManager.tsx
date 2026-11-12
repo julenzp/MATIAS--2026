@@ -129,7 +129,7 @@ export const NotificationManager = ({ hideTrigger = false }: { hideTrigger?: boo
   const [passengers, setPassengers] = useState<Passenger[]>([]);
   const [noteRoute, setNoteRoute] = useState("");
   const [notePassengerId, setNotePassengerId] = useState("");
-  const [noteMessage, setNoteMessage] = useState(DEFAULT_ABSENCE_MESSAGE);
+  const [noteMessage, setNoteMessage] = useState("");
   const [noteRange, setNoteRange] = useState<DateRange | undefined>(undefined);
   const [noteShift, setNoteShift] = useState<NoteShift>("all");
   const [passengerSearch, setPassengerSearch] = useState("");
@@ -331,8 +331,10 @@ export const NotificationManager = ({ hideTrigger = false }: { hideTrigger?: boo
     }
   };
 
-  const sendPassengerNote = async () => {
-    if (!notePassengerId || !noteMessage.trim()) {
+  // messageOverride: atajo "No acude" (guarda directamente sin escribir)
+  const sendPassengerNote = async (messageOverride?: string) => {
+    const finalMessage = (messageOverride ?? noteMessage).trim();
+    if (!notePassengerId || !finalMessage) {
       toast.error("Selecciona un usuario y escribe un mensaje");
       return;
     }
@@ -348,7 +350,7 @@ export const NotificationManager = ({ hideTrigger = false }: { hideTrigger?: boo
 
       const { error } = await supabase.from("passenger_notes").insert({
         passenger_id: notePassengerId,
-        message: noteMessage.trim(),
+        message: finalMessage,
         valid_from: validFrom,
         valid_until: validUntil,
         shift: noteShift,
@@ -359,7 +361,7 @@ export const NotificationManager = ({ hideTrigger = false }: { hideTrigger?: boo
       const passenger = passengers.find(p => p.id === notePassengerId);
       toast.success(`Nota añadida a ${passenger?.name || 'usuario'}`);
       // Se mantiene la ruta para registrar varias ausencias seguidas
-      setNoteMessage(DEFAULT_ABSENCE_MESSAGE);
+      setNoteMessage("");
       setNotePassengerId("");
       setNoteRange(undefined);
       setNoteShift("all");
@@ -731,35 +733,36 @@ export const NotificationManager = ({ hideTrigger = false }: { hideTrigger?: boo
                     ))}
                   </div>
 
-                  {/* Message */}
+                  {/* Atajo: un clic guarda la nota "No acude" sin escribir nada */}
+                  <Button
+                    type="button"
+                    onClick={() => sendPassengerNote(DEFAULT_ABSENCE_MESSAGE)}
+                    disabled={sendingNote || !noteRange?.from}
+                    className="w-full gap-2 bg-amber-600 hover:bg-amber-700 text-white font-semibold"
+                  >
+                    <MessageSquareWarning size={16} />
+                    {sendingNote ? "Guardando..." : DEFAULT_ABSENCE_MESSAGE}
+                  </Button>
+
+                  {/* Otro aviso (texto libre) */}
                   <Textarea
-                    placeholder="Mensaje..."
+                    placeholder="Otro aviso (escribe el mensaje)..."
                     value={noteMessage}
                     onChange={(e) => setNoteMessage(e.target.value)}
                     rows={2}
                     className="border-amber-300 focus:border-amber-500"
                   />
-                  {/* Mensaje predefinido, justo debajo del campo */}
                   <Button
                     type="button"
-                    size="sm"
-                    variant={noteMessage.trim() === DEFAULT_ABSENCE_MESSAGE ? "default" : "outline"}
-                    onClick={() => setNoteMessage(DEFAULT_ABSENCE_MESSAGE)}
-                    className="-mt-2 self-start"
+                    variant="outline"
+                    onClick={() => sendPassengerNote()}
+                    disabled={sendingNote || !noteMessage.trim() || !noteRange?.from}
+                    className="w-full gap-2"
                   >
-                    {DEFAULT_ABSENCE_MESSAGE}
+                    Añadir otro aviso
                   </Button>
                 </>
               )}
-
-              <Button
-                onClick={sendPassengerNote}
-                disabled={sendingNote || !notePassengerId || !noteMessage.trim() || !noteRange?.from}
-                className="w-full gap-2 bg-amber-600 hover:bg-amber-700 text-white"
-              >
-                <MessageSquareWarning size={16} />
-                {sendingNote ? "Guardando..." : "Añadir Nota de Usuario"}
-              </Button>
             </div>
 
             {/* Active user notes */}
