@@ -739,6 +739,16 @@ export const NotificationManager = ({ hideTrigger = false }: { hideTrigger?: boo
                     rows={2}
                     className="border-amber-300 focus:border-amber-500"
                   />
+                  {/* Mensaje predefinido, justo debajo del campo */}
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={noteMessage.trim() === DEFAULT_ABSENCE_MESSAGE ? "default" : "outline"}
+                    onClick={() => setNoteMessage(DEFAULT_ABSENCE_MESSAGE)}
+                    className="-mt-2 self-start"
+                  >
+                    {DEFAULT_ABSENCE_MESSAGE}
+                  </Button>
                 </>
               )}
 
