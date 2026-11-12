@@ -534,7 +534,10 @@ export type Database = {
           is_active: boolean
           message: string
           passenger_id: string
+          shift: string | null
           updated_at: string
+          valid_from: string | null
+          valid_until: string | null
         }
         Insert: {
           created_at?: string
@@ -543,7 +546,10 @@ export type Database = {
           is_active?: boolean
           message: string
           passenger_id: string
+          shift?: string | null
           updated_at?: string
+          valid_from?: string | null
+          valid_until?: string | null
         }
         Update: {
           created_at?: string
@@ -552,7 +558,10 @@ export type Database = {
           is_active?: boolean
           message?: string
           passenger_id?: string
+          shift?: string | null
           updated_at?: string
+          valid_from?: string | null
+          valid_until?: string | null
         }
         Relationships: [
           {

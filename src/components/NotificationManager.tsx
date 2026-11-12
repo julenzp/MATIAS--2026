@@ -20,9 +20,29 @@ import {
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Bell, Plus, Trash2, Send, Eye, CheckCircle, AlertTriangle, Clock, User, Search, MessageSquareWarning } from "lucide-react";
+import { Bell, Plus, Trash2, Send, Eye, CheckCircle, AlertTriangle, Clock, User, Search, MessageSquareWarning, CalendarDays } from "lucide-react";
 import { useUnreadAlerts } from "@/hooks/useUnreadAlerts";
 import { cn } from "@/lib/utils";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import type { DateRange } from "react-day-picker";
+import { es } from "date-fns/locale";
+import {
+  DEFAULT_ABSENCE_MESSAGE,
+  NoteShift,
+  formatNoteRange,
+  isNoteExpired,
+  madridToday,
+  fromDateStr,
+  shiftLabel,
+  toDateStr,
+} from "@/lib/noteValidity";
+
+const NOTE_SHIFTS: { value: NoteShift; label: string }[] = [
+  { value: "morning", label: "Mañana" },
+  { value: "afternoon", label: "Tarde" },
+  { value: "all", label: "Todo el día" },
+];
 
 interface Notification {
   id: string;
@@ -46,6 +66,9 @@ interface PassengerNote {
   message: string;
   is_active: boolean;
   created_at: string;
+  valid_from?: string | null;
+  valid_until?: string | null;
+  shift?: string | null;
   passengers?: Passenger;
 }
 
@@ -106,7 +129,9 @@ export const NotificationManager = ({ hideTrigger = false }: { hideTrigger?: boo
   const [passengers, setPassengers] = useState<Passenger[]>([]);
   const [noteRoute, setNoteRoute] = useState("");
   const [notePassengerId, setNotePassengerId] = useState("");
-  const [noteMessage, setNoteMessage] = useState("");
+  const [noteMessage, setNoteMessage] = useState(DEFAULT_ABSENCE_MESSAGE);
+  const [noteRange, setNoteRange] = useState<DateRange | undefined>(undefined);
+  const [noteShift, setNoteShift] = useState<NoteShift>("all");
   const [passengerSearch, setPassengerSearch] = useState("");
   const [sendingNote, setSendingNote] = useState(false);
 
@@ -216,7 +241,9 @@ export const NotificationManager = ({ hideTrigger = false }: { hideTrigger?: boo
       .limit(50);
 
     if (!error && data) {
-      setPassengerNotes(data as PassengerNote[]);
+      // Se listan las vigentes y las futuras; las caducadas ya no aparecen
+      const today = madridToday();
+      setPassengerNotes((data as PassengerNote[]).filter(n => !isNoteExpired(n, today)));
     }
   };
 
@@ -309,21 +336,33 @@ export const NotificationManager = ({ hideTrigger = false }: { hideTrigger?: boo
       toast.error("Selecciona un usuario y escribe un mensaje");
       return;
     }
+    if (!noteRange?.from) {
+      toast.error("Marca en el calendario el día o los días");
+      return;
+    }
 
     setSendingNote(true);
     try {
+      const validFrom = toDateStr(noteRange.from);
+      const validUntil = toDateStr(noteRange.to ?? noteRange.from);
+
       const { error } = await supabase.from("passenger_notes").insert({
         passenger_id: notePassengerId,
         message: noteMessage.trim(),
+        valid_from: validFrom,
+        valid_until: validUntil,
+        shift: noteShift,
       });
 
       if (error) throw error;
 
       const passenger = passengers.find(p => p.id === notePassengerId);
       toast.success(`Nota añadida a ${passenger?.name || 'usuario'}`);
-      setNoteMessage("");
+      // Se mantiene la ruta para registrar varias ausencias seguidas
+      setNoteMessage(DEFAULT_ABSENCE_MESSAGE);
       setNotePassengerId("");
-      setNoteRoute("");
+      setNoteRange(undefined);
+      setNoteShift("all");
       setPassengerSearch("");
       fetchPassengerNotes();
     } catch (error: any) {
@@ -642,20 +681,70 @@ export const NotificationManager = ({ hideTrigger = false }: { hideTrigger?: boo
                 </div>
               )}
 
-              {/* Message */}
               {notePassengerId && (
-                <Textarea
-                  placeholder="Escribe el aviso/nota para este usuario..."
-                  value={noteMessage}
-                  onChange={(e) => setNoteMessage(e.target.value)}
-                  rows={2}
-                  className="border-amber-300 focus:border-amber-500"
-                />
+                <>
+                  {/* Days */}
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className={cn(
+                          "w-full justify-start gap-2 font-normal border-amber-300",
+                          !noteRange?.from && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarDays size={16} />
+                        {noteRange?.from
+                          ? formatNoteRange({
+                              valid_from: toDateStr(noteRange.from),
+                              valid_until: toDateStr(noteRange.to ?? noteRange.from),
+                            })
+                          : "Marcar día o días"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="range"
+                        locale={es}
+                        weekStartsOn={1}
+                        selected={noteRange}
+                        onSelect={setNoteRange}
+                        defaultMonth={noteRange?.from ?? fromDateStr(madridToday())}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+
+                  {/* Shift */}
+                  <div className="grid grid-cols-3 gap-2">
+                    {NOTE_SHIFTS.map((s) => (
+                      <Button
+                        key={s.value}
+                        type="button"
+                        size="sm"
+                        variant={noteShift === s.value ? "default" : "outline"}
+                        onClick={() => setNoteShift(s.value)}
+                      >
+                        {s.label}
+                      </Button>
+                    ))}
+                  </div>
+
+                  {/* Message */}
+                  <Textarea
+                    placeholder="Mensaje..."
+                    value={noteMessage}
+                    onChange={(e) => setNoteMessage(e.target.value)}
+                    rows={2}
+                    className="border-amber-300 focus:border-amber-500"
+                  />
+                </>
               )}
 
               <Button
                 onClick={sendPassengerNote}
-                disabled={sendingNote || !notePassengerId || !noteMessage.trim()}
+                disabled={sendingNote || !notePassengerId || !noteMessage.trim() || !noteRange?.from}
                 className="w-full gap-2 bg-amber-600 hover:bg-amber-700 text-white"
               >
                 <MessageSquareWarning size={16} />
@@ -690,6 +779,10 @@ export const NotificationManager = ({ hideTrigger = false }: { hideTrigger?: boo
                           </span>
                           <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded">
                             {passenger?.route || "Sin ruta"}
+                          </span>
+                          <span className="text-xs bg-amber-100 dark:bg-amber-800/50 text-amber-900 dark:text-amber-100 px-2 py-0.5 rounded flex items-center gap-1">
+                            <CalendarDays size={10} />
+                            {formatNoteRange(note)} · {shiftLabel(note.shift)}
                           </span>
                         </div>
                         <p className="text-sm mb-1 text-amber-900 dark:text-amber-100">{note.message}</p>

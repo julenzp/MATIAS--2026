@@ -30,6 +30,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { PassengerNote } from "@/hooks/usePassengerNotes";
+import { noteAppliesToShift } from "@/lib/noteValidity";
 
 type ScheduleTableProps = {
   section: ScheduleSection;
@@ -1037,10 +1038,12 @@ export const ScheduleTable = memo(({ section, variant, passengerNotes = [], rout
   const notesByPassengerId = useMemo(() => {
     const map = new Map<string, typeof passengerNotes[0]>();
     for (const n of passengerNotes) {
+      // Solo las notas que aplican al turno de esta tabla (mañana / tarde / todo el día)
+      if (!noteAppliesToShift(n, variant)) continue;
       map.set(n.passenger_id, n);
     }
     return map;
-  }, [passengerNotes]);
+  }, [passengerNotes, variant]);
   
   // Filter out ZENTRO markers - only show real passengers
   const displayTrips = useMemo(() => filterRealPassengers(section.trips), [section.trips]);

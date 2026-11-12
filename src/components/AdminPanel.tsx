@@ -26,6 +26,7 @@ import { ChangeHistoryButton } from './ChangeHistoryModal';
 import { NotificationManager } from './NotificationManager';
 import { usePassengerAttendanceStats } from '@/hooks/usePassengerAttendanceStats';
 import { UserFilterCombobox } from './UserFilterCombobox';
+import { isNoteActiveToday } from '@/lib/noteValidity';
 
 type PassengerNote = {
   id: string;
@@ -33,6 +34,9 @@ type PassengerNote = {
   message: string;
   is_active: boolean;
   created_at: string;
+  valid_from?: string | null;
+  valid_until?: string | null;
+  shift?: string | null;
 };
 
 type Passenger = {
@@ -1081,7 +1085,7 @@ export function AdminPanel({ hideTrigger = false }: { hideTrigger?: boolean } = 
       setMaxRegistrationNumber(maxNum);
     }
     if (tripsRes.data) setTrips(tripsRes.data as ScheduleTrip[]);
-    if (notesRes.data) setPassengerNotes(notesRes.data as PassengerNote[]);
+    if (notesRes.data) setPassengerNotes((notesRes.data as PassengerNote[]).filter(n => isNoteActiveToday(n)));
   };
 
   // Passenger CRUD

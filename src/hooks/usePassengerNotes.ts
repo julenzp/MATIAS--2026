@@ -1,11 +1,15 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { isNoteActiveToday } from "@/lib/noteValidity";
 
 export type PassengerNote = {
   id: string;
   passenger_id: string;
   message: string;
   created_at: string;
+  valid_from?: string | null;
+  valid_until?: string | null;
+  shift?: string | null;
 };
 
 // Normalize route code for channel name (remove special chars)
@@ -64,7 +68,7 @@ export const usePassengerNotes = (routeCode: string) => {
       // Get all active notes for those passengers
       const { data: notesData, error } = await supabase
         .from('passenger_notes')
-        .select('id, passenger_id, message, created_at')
+        .select('id, passenger_id, message, created_at, valid_from, valid_until, shift')
         .in('passenger_id', routePassengerIds)
         .eq('is_active', true);
       
@@ -74,7 +78,9 @@ export const usePassengerNotes = (routeCode: string) => {
         console.error('Error fetching passenger notes:', error);
         setNotes([]);
       } else {
-        setNotes(notesData || []);
+        // Solo notas en vigor hoy (fecha de Madrid). El refresco periódico
+        // hace que las caducadas desaparezcan solas a medianoche.
+        setNotes((notesData || []).filter(n => isNoteActiveToday(n)));
       }
     } catch (err) {
       console.error('Error in fetchNotes:', err);
